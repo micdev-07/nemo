@@ -99,6 +99,7 @@ Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide :
     "./js/main.js": "<... JS principal ...>",
     "./js/patients.js": "<... Logique patients ...>"
   }}
+N.B: Vous pouvez créer autant de fichier (html, js) possible selon le besoin du projt, donc ne vous empechez pas à le faire. Vous n'êtes pas obligé à rester sur 2 ficheirs html et 2 autres Js seulement, aller même au délà selon le projet.
 }}
 """
 
