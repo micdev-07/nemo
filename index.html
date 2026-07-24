@@ -42,7 +42,24 @@
       z-index: 100;
       transition: transform 0.3s ease;
     }
+    .sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 998;
+}
 
+/* Quand active, l'overlay devient visible et cliquable */
+.sidebar-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
     .sidebar-header {
       padding: 1.5rem;
       border-bottom: 1px solid var(--border-color);
@@ -384,11 +401,16 @@
     /* Responsive Design */
     @media (max-width: 768px) {
       .sidebar {
-        position: absolute;
-        transform: translateX(-100%);
+        position: fixed;
+        top: 0;
+        left: -280px;
+        width: 280px;
+        height: 100vh;
+        transition: transform 0.3s ease;
+        z-index: 999;
       }
       .sidebar.open {
-        transform: translateX(0);
+        transform: translateX(280px);
       }
       .mobile-menu-toggle {
         display: block;
@@ -402,7 +424,7 @@
   <div id="authModal">
     <div class="auth-box">
       <h2 style="color: #00f0ff; margin-bottom: 0.5rem; font-size: 1.5rem;">NEMO STUDIO</h2>
-      <p style="color: #6e768e; font-size: 0.85rem; margin-bottom: 1.5rem;">Accès restreint à l'équipe Micoffice Labs</p>
+      <p style="color: #6e768e; font-size: 0.85rem; margin-bottom: 1.5rem;">Accès restreint à l'équipe Micoffice Labs (EQUIPE Z)</p>
       
       <input type="password" id="accessPass" placeholder="Mot de passe d'accès..." style="
         width: 100%; padding: 0.8rem 1rem; background: #161926; border: 1px solid #23283b;
@@ -421,9 +443,10 @@
   <!-- BARRE LATÉRALE : PROJETS -->
   <aside id="sidebar" class="sidebar">
     <div class="sidebar-header">
+      <button class="close-btn" onclick="closeSidebar()" style= "font-size: 1.5rem">✕</button>
       <div class="brand-box">
-        <span class="logo-text">NEMO</span>
-        <span class="badge-labs">LABS</span>
+        <span class="logo-text">NEMO STUDIO</span>
+        <span class="badge-labs">Micoffice Labs</span>
       </div>
     </div>
 
@@ -436,7 +459,7 @@
     </div>
 
     <div class="sidebar-footer">
-      Propulsé par <strong>Micoffice Labs</strong> • v2.5
+      Propulsé par <strong>Micoffice Labs</strong> • version NEMO: stong_v7
     </div>
   </aside>
 
@@ -454,7 +477,7 @@
       <div id="activeProjectBar" class="active-project-bar">
         <span id="currentProjectName" style="font-weight: bold; color: var(--color-aqua);">Projet Actif</span>
         <div class="action-group">
-          <a id="btnPreview" href="#" target="_blank" class="btn-action">Apercevoir ↗</a>
+          <a id="btnPreview" href="#" class="btn-action" onclick= "previewInNewTab()">Visualiser ↗</a>
           <a id="btnDownload" href="#" class="btn-action">📦 Télécharger ZIP</a>
         </div>
       </div>
@@ -462,7 +485,7 @@
       <!-- FORMULAIRE PROMPT -->
       <div class="prompt-wrapper">
         <textarea id="promptInput" class="prompt-input" 
-          placeholder="Décrivez votre projet (ex: Un dashboard SaaS de gestion des ventes avec graphiques)..."
+          placeholder="Décrivez votre projet (ex: Une plateforme qui simule un un salon virtuel futuriste)..."
           onkeydown="handleKeyDown(event)"></textarea>
         
         <button id="sendBtn" class="send-btn" onclick="handleSubmit()" title="Lancer NEMO">
@@ -516,8 +539,28 @@
 
     // Gestion du menu mobile
     function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('open');
-    }
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.querySelector('.sidebar-overlay');
+  
+  if (sidebar && overlay) {
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('active');
+  }
+}
+
+function closeSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.querySelector('.sidebar-overlay');
+  
+  if (sidebar && overlay) {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('active');
+  }
+}
+    function openSidebar() {
+    document.getElementById("mySidebar").classList.add("open");
+    document.getElementById("sidebarOverlay").classList.add("active");
+  }
 
     // Charger les projets enregistrés au démarrage
     window.addEventListener('load', () => {
@@ -547,7 +590,7 @@
           card.innerHTML = `
             <span class="project-title">${proj.name}</span>
             <div class="project-card-actions">
-              <button class="btn-card btn-card-preview" onclick="previewProject('${proj.url}')">👁️ Voir</button>
+              <button class="btn-card btn-card-preview" onclick= "previewInNewTab()" >Visualiser ↗</button>
               <button class="btn-card btn-card-modify" onclick="selectProjectForModify('${proj.id}', '${proj.name}', ${safeFiles}, '${proj.url}')">✏️ Modifier</button>
             </div>
           `;
@@ -556,6 +599,7 @@
       } catch (err) {
         console.error("Erreur chargement projets :", err);
       }
+      
     }
 
     // Visualiser le projet dans la fenêtre Iframe
@@ -573,6 +617,7 @@
       previewProject(url);
       updateUIForActiveProject();
       loadSavedProjects(); // Rafraîchit l'état visuel actif dans la barre latérale
+      closeSidebar();
     }
 
     function handleKeyDown(event) {
@@ -659,6 +704,57 @@
         setLoading(false, "Modifications appliquées !");
       }
     }
+    function previewInNewTab() {
+  if (!activeProject || !activeProject.files) {
+    alert("Aucun projet à visualiser !");
+    return;
+  }
+
+  // 1. On prépare la fenêtre immédiatement
+  const newTab = window.open('', '_blank');
+
+  if (!newTab) {
+    alert("Veuillez autoriser les fenêtres surgissantes (pop-ups) pour voir l'aperçu.");
+    return;
+  }
+
+  // 2. On prépare le contenu HTML/CSS/JS (Code universel)
+  const files = activeProject.files;
+  const fileNames = Object.keys(files);
+
+  let mainHtmlKey = fileNames.find(name => name.toLowerCase() === 'index.html') 
+                 || fileNames.find(name => name.toLowerCase().endsWith('.html'));
+
+  if (!mainHtmlKey) {
+    newTab.close();
+    alert("Aucun fichier HTML trouvé dans ce projet.");
+    return;
+  }
+
+  let htmlContent = files[mainHtmlKey];
+
+  let combinedCss = "";
+  fileNames.forEach(name => {
+    if (name.toLowerCase().endsWith('.css')) combinedCss += `\n${files[name]}`;
+  });
+
+  let combinedJs = "";
+  fileNames.forEach(name => {
+    if (name.toLowerCase().endsWith('.js')) combinedJs += `\n${files[name]}`;
+  });
+
+  if (combinedCss.trim()) {
+    htmlContent = htmlContent.replace('</head>', `<style>${combinedCss}</style></head>`);
+  }
+  if (combinedJs.trim()) {
+    htmlContent = htmlContent.replace('</body>', `<script>${combinedJs}<\/script></body>`);
+  }
+
+  // 3. On injecte le contenu directement dans le nouvel onglet ouvert !
+  newTab.document.open();
+  newTab.document.write(htmlContent);
+  newTab.document.close();
+}
 
     function updateUIForActiveProject() {
       document.getElementById('mainTitle').innerText = "Que souhaitez-vous modifier ?";
@@ -685,5 +781,6 @@
       document.getElementById('statusText').innerText = message;
     }
   </script>
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
 </body>
 </html>
