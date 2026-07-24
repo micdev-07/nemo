@@ -84,6 +84,8 @@ CONSIGNE D'ARCHITECTURE MULTI-FICHIERS (CRITIQUE) :
 - Découpe le projet en autant de fichiers que nécessaire pour garantir un fonctionnement complet sans code tronqué.
 - Tu peux créer plusieurs pages HTML (ex: index.html, patients.html, appointments.html) OU une structure modulaire avec plusieurs scripts JS (ex: js/app.js, js/patients.js, js/chart.js).
 - Assure-toi que tous les liens du menu (href) et les scripts (src) pointent vers des fichiers réels existants dans ton objet JSON.
+- Assure toi qu'il y a une possibilité, une faciliter de naviguer entre différents pages du projet (si il y en a). Pas question d se trouver piegé sur une page x.
+- Si le projet inclus la bd supabase, assure toi que le projet gérè trop bien les différent rêquetes (pour afficher par example les informations de la bd si besoin, ... que tout sur l db fonctionne 
 
 FORMAT DE SORTIE STRICT (JSON) :
 Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide :
@@ -93,9 +95,9 @@ Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide :
   "files": {{
     "index.html": "<... HTML5 principal ...>",
     "patients.html": "<... Page patients ...>",
-    "styles/main.css": "<... Styles CSS modernes ...>",
-    "js/main.js": "<... JS principal ...>",
-    "js/patients.js": "<... Logique patients ...>"
+    "./styles/styles.css": "<... Styles CSS modernes ...>",
+    "./js/main.js": "<... JS principal ...>",
+    "./js/patients.js": "<... Logique patients ...>"
   }}
 }}
 """
