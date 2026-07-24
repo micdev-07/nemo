@@ -526,7 +526,7 @@
 
     async function loadSavedProjects() {
       try {
-        const res = await fetch('/api/projects');
+        const res = await fetch(BACKEND_URL + '/api/projects');
         const data = await res.json();
         const container = document.getElementById('projectsList');
         container.innerHTML = '';
