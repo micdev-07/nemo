@@ -26,7 +26,8 @@ app = FastAPI(title="NEMO Engine - Full Featured")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"], # Je mettrai ici le lien vers le frontend en ligne
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
