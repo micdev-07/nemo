@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEMO | Micoffice Labs</title>
+  
+  <style>
+    :root {
+      --bg-dark: #07080b;
+      --bg-card: #0f111a;
+      --border-color: #23283b;
+      --color-aqua: #00f0ff;
+      --color-aqua-hover: #33f3ff;
+      --text-main: #f0f2f5;
+      --text-muted: #6e768e;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    .nemo-header {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand-box {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .logo-text {
+      font-size: 1.8rem;
+      font-weight: 900;
+      letter-spacing: 0.2em;
+      color: var(--color-aqua);
+    }
+
+    .badge-labs {
+      font-size: 0.7rem;
+      background: rgba(0, 240, 255, 0.1);
+      color: var(--color-aqua);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+
+    .status-badge { font-size: 0.85rem; color: var(--text-muted); }
+
+    .main-container {
+      width: 100%;
+      max-width: 800px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .main-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffffff 0%, #8a90a0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .prompt-wrapper {
+      position: relative;
+      width: 100%;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      transition: border-color 0.3s;
+    }
+
+    .prompt-wrapper:focus-within { border-color: var(--color-aqua); }
+
+    .prompt-input {
+      width: 100%;
+      height: 110px;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-main);
+      font-size: 1rem;
+      resize: none;
+      font-family: inherit;
+    }
+
+    .send-btn {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: var(--color-aqua);
+      border: none;
+      color: var(--bg-dark);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .send-btn:hover { background: var(--color-aqua-hover); transform: scale(1.05); }
+    .send-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+    .send-btn svg { width: 20px; height: 20px; fill: currentColor; }
+
+    /* Actions Bar (Active Project) */
+    .active-project-bar {
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 0.8rem 1.2rem;
+      border-radius: 12px;
+    }
+
+    .active-project-bar.visible { display: flex; }
+
+    .btn-action {
+      background: transparent;
+      border: 1px solid var(--color-aqua);
+      color: var(--color-aqua);
+      padding: 0.4rem 1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .btn-action:hover {
+      background: var(--color-aqua);
+      color: var(--bg-dark);
+    }
+
+    .nemo-footer {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+<div id="authModal" style="
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(7, 8, 11, 0.95);
+  backdrop-filter: blur(10px);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+">
+  <div style="
+    background: #0f111a;
+    border: 1px solid #23283b;
+    padding: 2.5rem;
+    border-radius: 16px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 10px 40px rgba(0, 240, 255, 0.1);
+  ">
+    <h2 style="color: #00f0ff; margin-bottom: 0.5rem; font-size: 1.5rem;">NEMO Studio</h2>
+    <p style="color: #6e768e; font-size: 0.85rem; margin-bottom: 1.5rem;">Accès restreint à l'équipe Micoffice Labs</p>
+    
+    <input type="password" id="accessPass" placeholder="Mot de passe d'accès..." style="
+      width: 100%;
+      padding: 0.8rem 1rem;
+      background: #161926;
+      border: 1px solid #23283b;
+      border-radius: 8px;
+      color: #fff;
+      margin-bottom: 1rem;
+      outline: none;
+      font-size: 0.95rem;
+    " onkeydown="if(event.key === 'Enter') verifyPassword()">
+
+    <button onclick="verifyPassword()" style="
+      width: 100%;
+      padding: 0.8rem;
+      background: #00f0ff;
+      border: none;
+      border-radius: 8px;
+      color: #07080b;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    ">Déverrouiller l'accès</button>
+    
+    <p id="authError" style="color: #ff4a4a; font-size: 0.8rem; margin-top: 0.8rem; display: none;">Mot de passe incorrect !</p>
+  </div>
+</div>
+  <header class="nemo-header">
+    <div class="brand-box">
+      <span class="logo-text">NEMO</span>
+      <span class="badge-labs">MICOFFICE LABS</span>
+    </div>
+    <div id="statusText" class="status-badge">Prêt pour une nouvelle création</div>
+  </header>
+
+  <main class="main-container">
+    <h1 id="mainTitle" class="main-title">Que voulez-vous créer ?</h1>
+
+    <div id="activeProjectBar" class="active-project-bar">
+      <span id="currentProjectName" style="font-weight: bold; color: var(--color-aqua);">Projet Actif</span>
+      <div style="display: flex; gap: 0.5rem;">
+        <a id="btnPreview" href="#" target="_blank" class="btn-action">Apercevoir</a>
+        <a id="btnDownload" href="#" class="btn-action">📦 Télécharger ZIP</a>
+        <button onclick="resetProject()" class="btn-action" style="border-color: #ff4a4a; color: #ff4a4a;">Nouveau Projet</button>
+      </div>
+    </div>
+
+    <div class="prompt-wrapper">
+      <textarea id="promptInput" class="prompt-input" 
+        placeholder="Décrivez votre projet (ex: Un dashboard SaaS de gestion des ventes avec graphiques)..."
+        onkeydown="handleKeyDown(event)"></textarea>
+      
+      <button id="sendBtn" class="send-btn" onclick="handleSubmit()" title="Lancer NEMO">
+        <svg viewBox="0 0 24 24">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+        </svg>
+      </button>
+    </div>
+  </main>
+
+  <footer class="nemo-footer">
+    Propulsé par <strong>Micoffice Labs</strong> • Agent d'action web v2.5
+  </footer>
+
+  <script>
+let currentActiveProject = null;
+
+// Charger la liste des projets dès l'ouverture de la page
+window.addEventListener('load', () => {
+  loadSavedProjects();
+});
+
+async function loadSavedProjects() {
+  try {
+    const res = await fetch('/api/projects');
+    const data = await res.json();
+    const container = document.getElementById('projectsList');
+    container.innerHTML = '';
+
+    if (data.projects.length === 0) {
+      container.innerHTML = '<p style="color: #6e768e; font-size: 0.85rem; text-align: center;">Aucun projet enregistré</p>';
+      return;
+    }
+
+    data.projects.reverse().forEach(proj => {
+      const card = document.createElement('div');
+      card.style.cssText = `
+        background: #161926;
+        border: 1px solid #23283b;
+        border-radius: 10px;
+        padding: 0.8rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        transition: border 0.2s;
+      `;
+
+      card.innerHTML = `
+        <span style="font-weight: bold; font-size: 0.9rem; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          ${proj.name}
+        </span>
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.3rem;">
+          <button onclick="previewProject('${proj.url}')" style="
+            flex: 1; background: #23283b; color: #00f0ff; border: none; border-radius: 6px; padding: 0.4rem; font-size: 0.75rem; cursor: pointer; font-weight: bold;
+          ">👁️ Voir</button>
+          
+          <button onclick="selectProjectForModify('${proj.id}', '${proj.name}', ${JSON.stringify(proj.files).replace(/"/g, '&quot;')}, '${proj.url}')" style="
+            flex: 1; background: #23283b; color: #ffb703; border: none; border-radius: 6px; padding: 0.4rem; font-size: 0.75rem; cursor: pointer; font-weight: bold;
+          ">✏️ Modifier</button>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  } catch (err) {
+    console.error("Erreur chargement projets :", err);
+  }
+}
+
+// Action : "Voir" -> Affiche l'aperçu dans l'Iframe
+function previewProject(url) {
+  const iframe = document.getElementById('projectPreviewIframe');
+  if (iframe) {
+    iframe.src = url;
+  }
+}
+
+// Action : "Modifier" -> Active le projet en cours pour le prompt de modification
+function selectProjectForModify(id, name, files, url) {
+  currentActiveProject = { id, name, files, url };
+  
+  // Mettre à jour l'iframe d'aperçu
+  previewProject(url);
+  
+  // Indiquer à l'utilisateur qu'il modifie ce projet
+  alert(`Projet "${name}" chargé ! Tes prochains prompts modifieront directement ce projet.`);
+}
+
+// Quand l'utilisateur crée un nouveau projet, on rafraîchit la sidebar
+async function onProjectCreated(data) {
+  await loadSavedProjects();
+  selectProjectForModify(data.project_id, data.project_name, data.files, data.project_url);
+}
+    let activeProject = null; // Stocke l'état du projet en cours { id, name, files, url }
+    const TEAM_PASSWORD = "micoffice_equipe_z_7@";
+
+// Fonction d'initialisation exécutée immédiatement
+(function checkAuth() {
+  if (sessionStorage.getItem('nemo_authenticated') === 'true') {
+    // Si déjà authentifié, on masque la modale dès que possible
+    window.addEventListener('load', () => {
+      const modal = document.getElementById('authModal');
+      if (modal) modal.style.display = 'none';
+    });
+  }
+})();
+
+function verifyPassword() {
+  const input = document.getElementById('accessPass');
+  const errorMsg = document.getElementById('authError');
+  const modal = document.getElementById('authModal');
+
+  if (input.value.trim() === TEAM_PASSWORD) {
+    sessionStorage.setItem('nemo_authenticated', 'true');
+    modal.style.display = 'none';
+  } else {
+    errorMsg.style.display = 'block';
+    input.value = '';
+    input.focus();
+  }
+}
+    function handleKeyDown(event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        handleSubmit();
+      }
+    }
+
+    async function handleSubmit() {
+      const promptInput = document.getElementById('promptInput');
+      const prompt = promptInput.value.trim();
+      if (!prompt) return;
+
+      if (!activeProject) {
+        await createNewProject(prompt);
+      } else {
+        await modifyCurrentProject(prompt);
+      }
+    }
+
+    async function createNewProject(prompt) {
+      setLoading(true, "NEMO conçoit le projet...");
+
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt })
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'success') {
+          activeProject = {
+            id: data.project_id,
+            name: data.project_name,
+            url: data.project_url,
+            files: data.files
+          };
+
+          updateUIForActiveProject();
+          window.open(data.project_url, '_blank');
+          document.getElementById('promptInput').value = '';
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Erreur lors de la création du projet.");
+      } finally {
+        setLoading(false, "Projet créé ! Entrez une demande pour le modifier.");
+      }
+    }
+
+    async function modifyCurrentProject(prompt) {
+      setLoading(true, "NEMO applique les modifications en direct...");
+
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/modify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            project_id: activeProject.id,
+            prompt: prompt,
+            current_files: activeProject.files
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.status === 'success') {
+          activeProject.files = data.files;
+          activeProject.url = data.project_url;
+
+          window.open(data.project_url, '_blank');
+          document.getElementById('promptInput').value = '';
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Erreur lors de la modification.");
+      } finally {
+        setLoading(false, "Modifications appliquées !");
+      }
+    }
+
+    function updateUIForActiveProject() {
+      document.getElementById('mainTitle').innerText = "Que souhaitez-vous modifier ?";
+      document.getElementById('promptInput').placeholder = "Modifiez le projet en direct (ex: Change la couleur principale en néon vert, ajoute un bouton d'export PDF)...";
+      document.getElementById('currentProjectName').innerText = activeProject.name;
+      document.getElementById('btnPreview').href = activeProject.url;
+      document.getElementById('btnDownload').href = `http://127.0.0.1:8000/api/download/${activeProject.id}`;
+      document.getElementById('activeProjectBar').classList.add('visible');
+    }
+
+    function resetProject() {
+      activeProject = null;
+      document.getElementById('mainTitle').innerText = "Que voulez-vous créer ?";
+      document.getElementById('promptInput').placeholder = "Décrivez votre projet...";
+      document.getElementById('activeProjectBar').classList.remove('visible');
+      document.getElementById('statusText').innerText = "Prêt pour une nouvelle création";
+    }
+
+    function setLoading(isLoading, message) {
+      document.getElementById('promptInput').disabled = isLoading;
+      document.getElementById('sendBtn').disabled = isLoading;
+      document.getElementById('statusText').innerText = message;
+    }
+  </script>
+</body>
+</html>
