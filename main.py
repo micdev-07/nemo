@@ -64,7 +64,7 @@ DIRECTIVES D'EXCELLENCE :
    - Ne laisse JAMAIS de conteneurs d'images vides ou de simples placeholders génériques.
 
 2. DESIGN & ERGONOMIE :
-   - Interfaces modernes : Thème sombre ou clair adapté, Glassmorphism, néons, animations CSS fluides, responsive design.
+   - Interfaces modernes : Thème sombre ou clair adapté, Glassmorphism, néons pas génants, animations CSS fluides, responsive design.
 
 3. PERSISTANCE DE DONNÉES (SUPABASE & LOCALSTORAGE) :
    - Si besoin de données dynamiques (panier, tâches, produits, réglages, formulaires) :
