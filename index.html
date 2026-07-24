@@ -640,7 +640,9 @@
             current_files: activeProject.files
           })
         });
-
+        if (!response.ok) {
+          throw new Error(`Erreur serveur: ${response.status}`);
+        }
         const data = await response.json();
 
         if (data.status === 'success') {
