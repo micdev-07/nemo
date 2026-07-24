@@ -598,7 +598,7 @@
       setLoading(true, "NEMO conçoit le projet...");
 
       try {
-        const response = await fetch('${BACKEND_URL}/api/create', {
+        const response = await fetch(BACKEND_URL + '/api/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt })
@@ -631,7 +631,7 @@
       setLoading(true, "NEMO applique les modifications en direct...");
 
       try {
-        const response = await fetch('${BACKEND_URL}/api/modify', {
+        const response = await fetch(BACKEND_URL + '/api/modify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
