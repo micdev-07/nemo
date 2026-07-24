@@ -3,17 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NEMO | Micoffice Labs</title>
+  <title>NEMO Studio | Micoffice Labs</title>
   
   <style>
     :root {
       --bg-dark: #07080b;
       --bg-card: #0f111a;
+      --bg-sidebar: #0b0d14;
       --border-color: #23283b;
       --color-aqua: #00f0ff;
       --color-aqua-hover: #33f3ff;
+      --color-amber: #ffb703;
+      --color-danger: #ff4a4a;
       --text-main: #f0f2f5;
       --text-muted: #6e768e;
+      --sidebar-width: 320px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -24,15 +28,24 @@
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       height: 100vh;
       display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      align-items: center;
-      padding: 2rem;
+      overflow: hidden;
     }
 
-    .nemo-header {
-      width: 100%;
-      max-width: 900px;
+    /* --- SIDEBAR LATÉRALE --- */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--bg-sidebar);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      z-index: 100;
+      transition: transform 0.3s ease;
+    }
+
+    .sidebar-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -41,48 +54,220 @@
     .brand-box {
       display: flex;
       align-items: center;
-      gap: 0.8rem;
+      gap: 0.6rem;
     }
 
     .logo-text {
-      font-size: 1.8rem;
+      font-size: 1.5rem;
       font-weight: 900;
-      letter-spacing: 0.2em;
+      letter-spacing: 0.15em;
       color: var(--color-aqua);
     }
 
     .badge-labs {
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       background: rgba(0, 240, 255, 0.1);
       color: var(--color-aqua);
       border: 1px solid rgba(0, 240, 255, 0.3);
-      padding: 0.2rem 0.6rem;
+      padding: 0.2rem 0.5rem;
       border-radius: 20px;
       font-weight: 600;
     }
 
-    .status-badge { font-size: 0.85rem; color: var(--text-muted); }
+    .btn-new-project {
+      margin: 1rem 1.2rem 0.5rem 1.2rem;
+      padding: 0.75rem;
+      background: rgba(0, 240, 255, 0.08);
+      border: 1px dashed var(--color-aqua);
+      color: var(--color-aqua);
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
 
-    .main-container {
-      width: 100%;
-      max-width: 800px;
-      text-align: center;
+    .btn-new-project:hover {
+      background: var(--color-aqua);
+      color: var(--bg-dark);
+    }
+
+    .projects-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem 1.2rem;
       display: flex;
       flex-direction: column;
-      gap: 1.5rem;
+      gap: 0.8rem;
+    }
+
+    .projects-container::-webkit-scrollbar {
+      width: 5px;
+    }
+    .projects-container::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+
+    .project-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .project-card:hover {
+      border-color: rgba(0, 240, 255, 0.4);
+    }
+
+    .project-card.active {
+      border-color: var(--color-aqua);
+      background: rgba(0, 240, 255, 0.03);
+    }
+
+    .project-title {
+      font-weight: bold;
+      font-size: 0.88rem;
+      color: #e2e8f0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .project-card-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-card {
+      flex: 1;
+      background: #161926;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.4rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+
+    .btn-card-preview { color: var(--color-aqua); }
+    .btn-card-preview:hover { background: rgba(0, 240, 255, 0.1); }
+
+    .btn-card-modify { color: var(--color-amber); }
+    .btn-card-modify:hover { background: rgba(255, 183, 3, 0.1); }
+
+    .sidebar-footer {
+      padding: 1rem;
+      border-top: 1px solid var(--border-color);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* --- ZONE PRINCIPALE DE TRAVAIL --- */
+    .main-workspace {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .top-bar {
+      padding: 1rem 2rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-dark);
+    }
+
+    .mobile-menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text-main);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    .status-badge {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .workspace-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem;
+      gap: 1.2rem;
+      overflow-y: auto;
     }
 
     .main-title {
-      font-size: 2.2rem;
+      font-size: 2rem;
       font-weight: 800;
       background: linear-gradient(135deg, #ffffff 0%, #8a90a0 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      text-align: center;
     }
 
+    /* Barre d'action projet actif */
+    .active-project-bar {
+      display: none;
+      width: 100%;
+      max-width: 900px;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 0.8rem 1.2rem;
+      border-radius: 12px;
+    }
+
+    .active-project-bar.visible { display: flex; }
+
+    .action-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-action {
+      background: transparent;
+      border: 1px solid var(--color-aqua);
+      color: var(--color-aqua);
+      padding: 0.4rem 0.9rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 0.82rem;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .btn-action:hover {
+      background: var(--color-aqua);
+      color: var(--bg-dark);
+    }
+
+    /* Zone Prompt */
     .prompt-wrapper {
       position: relative;
       width: 100%;
+      max-width: 900px;
       background-color: var(--bg-card);
       border: 1px solid var(--border-color);
       border-radius: 16px;
@@ -95,12 +280,12 @@
 
     .prompt-input {
       width: 100%;
-      height: 110px;
+      height: 90px;
       background: transparent;
       border: none;
       outline: none;
       color: var(--text-main);
-      font-size: 1rem;
+      font-size: 0.95rem;
       resize: none;
       font-family: inherit;
     }
@@ -126,238 +311,262 @@
     .send-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
     .send-btn svg { width: 20px; height: 20px; fill: currentColor; }
 
-    /* Actions Bar (Active Project) */
-    .active-project-bar {
-      display: none;
-      justify-content: space-between;
-      align-items: center;
+    /* Zone de prévisualisation Frame */
+    .preview-container {
+      width: 100%;
+      max-width: 900px;
+      flex: 1;
+      min-height: 350px;
       background: var(--bg-card);
       border: 1px solid var(--border-color);
-      padding: 0.8rem 1.2rem;
-      border-radius: 12px;
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
-    .active-project-bar.visible { display: flex; }
-
-    .btn-action {
-      background: transparent;
-      border: 1px solid var(--color-aqua);
-      color: var(--color-aqua);
-      padding: 0.4rem 1rem;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      text-decoration: none;
-      font-size: 0.85rem;
-      transition: background 0.2s, color 0.2s;
-    }
-
-    .btn-action:hover {
-      background: var(--color-aqua);
-      color: var(--bg-dark);
-    }
-
-    .nemo-footer {
-      font-size: 0.8rem;
+    .preview-header {
+      padding: 0.6rem 1rem;
+      background: #121522;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.75rem;
       color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .preview-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--color-aqua);
+    }
+
+    .preview-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #ffffff;
+    }
+
+    /* Modal Auth */
+    #authModal {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(7, 8, 11, 0.95);
+      backdrop-filter: blur(10px);
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .auth-box {
+      background: #0f111a;
+      border: 1px solid #23283b;
+      padding: 2.5rem;
+      border-radius: 16px;
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 10px 40px rgba(0, 240, 255, 0.1);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .sidebar {
+        position: absolute;
+        transform: translateX(-100%);
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .mobile-menu-toggle {
+        display: block;
+      }
     }
   </style>
 </head>
 <body>
 
-<div id="authModal" style="
-  position: fixed;
-  top: 0; left: 0; width: 100vw; height: 100vh;
-  background: rgba(7, 8, 11, 0.95);
-  backdrop-filter: blur(10px);
-  z-index: 9999;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-">
-  <div style="
-    background: #0f111a;
-    border: 1px solid #23283b;
-    padding: 2.5rem;
-    border-radius: 16px;
-    text-align: center;
-    max-width: 400px;
-    width: 90%;
-    box-shadow: 0 10px 40px rgba(0, 240, 255, 0.1);
-  ">
-    <h2 style="color: #00f0ff; margin-bottom: 0.5rem; font-size: 1.5rem;">NEMO Studio</h2>
-    <p style="color: #6e768e; font-size: 0.85rem; margin-bottom: 1.5rem;">Accès restreint à l'équipe Micoffice Labs</p>
-    
-    <input type="password" id="accessPass" placeholder="Mot de passe d'accès..." style="
-      width: 100%;
-      padding: 0.8rem 1rem;
-      background: #161926;
-      border: 1px solid #23283b;
-      border-radius: 8px;
-      color: #fff;
-      margin-bottom: 1rem;
-      outline: none;
-      font-size: 0.95rem;
-    " onkeydown="if(event.key === 'Enter') verifyPassword()">
+  <!-- MODAL D'AUTHENTIFICATION -->
+  <div id="authModal">
+    <div class="auth-box">
+      <h2 style="color: #00f0ff; margin-bottom: 0.5rem; font-size: 1.5rem;">NEMO Studio</h2>
+      <p style="color: #6e768e; font-size: 0.85rem; margin-bottom: 1.5rem;">Accès restreint à l'équipe Micoffice Labs</p>
+      
+      <input type="password" id="accessPass" placeholder="Mot de passe d'accès..." style="
+        width: 100%; padding: 0.8rem 1rem; background: #161926; border: 1px solid #23283b;
+        border-radius: 8px; color: #fff; margin-bottom: 1rem; outline: none; font-size: 0.95rem;
+      " onkeydown="if(event.key === 'Enter') verifyPassword()">
 
-    <button onclick="verifyPassword()" style="
-      width: 100%;
-      padding: 0.8rem;
-      background: #00f0ff;
-      border: none;
-      border-radius: 8px;
-      color: #07080b;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s;
-    ">Déverrouiller l'accès</button>
-    
-    <p id="authError" style="color: #ff4a4a; font-size: 0.8rem; margin-top: 0.8rem; display: none;">Mot de passe incorrect !</p>
-  </div>
-</div>
-  <header class="nemo-header">
-    <div class="brand-box">
-      <span class="logo-text">NEMO</span>
-      <span class="badge-labs">MICOFFICE LABS</span>
+      <button onclick="verifyPassword()" style="
+        width: 100%; padding: 0.8rem; background: #00f0ff; border: none; border-radius: 8px;
+        color: #07080b; font-weight: bold; cursor: pointer; transition: background 0.2s;
+      ">Déverrouiller l'accès</button>
+      
+      <p id="authError" style="color: #ff4a4a; font-size: 0.8rem; margin-top: 0.8rem; display: none;">Mot de passe incorrect !</p>
     </div>
-    <div id="statusText" class="status-badge">Prêt pour une nouvelle création</div>
-  </header>
+  </div>
 
-  <main class="main-container">
-    <h1 id="mainTitle" class="main-title">Que voulez-vous créer ?</h1>
-
-    <div id="activeProjectBar" class="active-project-bar">
-      <span id="currentProjectName" style="font-weight: bold; color: var(--color-aqua);">Projet Actif</span>
-      <div style="display: flex; gap: 0.5rem;">
-        <a id="btnPreview" href="#" target="_blank" class="btn-action">Apercevoir</a>
-        <a id="btnDownload" href="#" class="btn-action">📦 Télécharger ZIP</a>
-        <button onclick="resetProject()" class="btn-action" style="border-color: #ff4a4a; color: #ff4a4a;">Nouveau Projet</button>
+  <!-- BARRE LATÉRALE : PROJETS -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand-box">
+        <span class="logo-text">NEMO</span>
+        <span class="badge-labs">LABS</span>
       </div>
     </div>
 
-    <div class="prompt-wrapper">
-      <textarea id="promptInput" class="prompt-input" 
-        placeholder="Décrivez votre projet (ex: Un dashboard SaaS de gestion des ventes avec graphiques)..."
-        onkeydown="handleKeyDown(event)"></textarea>
-      
-      <button id="sendBtn" class="send-btn" onclick="handleSubmit()" title="Lancer NEMO">
-        <svg viewBox="0 0 24 24">
-          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
-        </svg>
-      </button>
+    <button class="btn-new-project" onclick="resetProject()">
+      <span>+</span> Nouveau Projet
+    </button>
+
+    <div id="projectsList" class="projects-container">
+      <!-- Chargement dynamique des projets -->
+    </div>
+
+    <div class="sidebar-footer">
+      Propulsé par <strong>Micoffice Labs</strong> • v2.5
+    </div>
+  </aside>
+
+  <!-- ZONE DE TRAVAIL PRINCIPALE -->
+  <main class="main-workspace">
+    <header class="top-bar">
+      <button class="mobile-menu-toggle" onclick="toggleSidebar()">☰</button>
+      <div id="statusText" class="status-badge">Prêt pour une nouvelle création</div>
+    </header>
+
+    <div class="workspace-content">
+      <h1 id="mainTitle" class="main-title">Que voulez-vous créer ?</h1>
+
+      <!-- BARRE DU PROJET ACTIF -->
+      <div id="activeProjectBar" class="active-project-bar">
+        <span id="currentProjectName" style="font-weight: bold; color: var(--color-aqua);">Projet Actif</span>
+        <div class="action-group">
+          <a id="btnPreview" href="#" target="_blank" class="btn-action">Apercevoir ↗</a>
+          <a id="btnDownload" href="#" class="btn-action">📦 Télécharger ZIP</a>
+        </div>
+      </div>
+
+      <!-- FORMULAIRE PROMPT -->
+      <div class="prompt-wrapper">
+        <textarea id="promptInput" class="prompt-input" 
+          placeholder="Décrivez votre projet (ex: Un dashboard SaaS de gestion des ventes avec graphiques)..."
+          onkeydown="handleKeyDown(event)"></textarea>
+        
+        <button id="sendBtn" class="send-btn" onclick="handleSubmit()" title="Lancer NEMO">
+          <svg viewBox="0 0 24 24">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- ZONE DE TÉLÉCHARGEMENT & CONFIRMATION -->
+<div id="downloadContainer" class="download-card" style="display: none;">
+  <div class="download-icon">📦</div>
+  <h3>Projet généré avec succès !</h3>
+  <p>Pour visualiser votre création, téléchargez le projet et ouvrez le fichier <code>index.html</code> dans votre navigateur.</p>
+  
+  <a id="autoDownloadBtn" href="#" class="btn-download-main">
+    ⬇️ Télécharger le projet (.ZIP)
+  </a>
+</div>
     </div>
   </main>
 
-  <footer class="nemo-footer">
-    Propulsé par <strong>Micoffice Labs</strong> • Agent d'action web v2.5
-  </footer>
-
   <script>
-let currentActiveProject = null;
-
-// Charger la liste des projets dès l'ouverture de la page
-window.addEventListener('load', () => {
-  loadSavedProjects();
-});
-
-async function loadSavedProjects() {
-  try {
-    const res = await fetch('/api/projects');
-    const data = await res.json();
-    const container = document.getElementById('projectsList');
-    container.innerHTML = '';
-
-    if (data.projects.length === 0) {
-      container.innerHTML = '<p style="color: #6e768e; font-size: 0.85rem; text-align: center;">Aucun projet enregistré</p>';
-      return;
-    }
-
-    data.projects.reverse().forEach(proj => {
-      const card = document.createElement('div');
-      card.style.cssText = `
-        background: #161926;
-        border: 1px solid #23283b;
-        border-radius: 10px;
-        padding: 0.8rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        transition: border 0.2s;
-      `;
-
-      card.innerHTML = `
-        <span style="font-weight: bold; font-size: 0.9rem; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-          ${proj.name}
-        </span>
-        <div style="display: flex; gap: 0.5rem; margin-top: 0.3rem;">
-          <button onclick="previewProject('${proj.url}')" style="
-            flex: 1; background: #23283b; color: #00f0ff; border: none; border-radius: 6px; padding: 0.4rem; font-size: 0.75rem; cursor: pointer; font-weight: bold;
-          ">👁️ Voir</button>
-          
-          <button onclick="selectProjectForModify('${proj.id}', '${proj.name}', ${JSON.stringify(proj.files).replace(/"/g, '&quot;')}, '${proj.url}')" style="
-            flex: 1; background: #23283b; color: #ffb703; border: none; border-radius: 6px; padding: 0.4rem; font-size: 0.75rem; cursor: pointer; font-weight: bold;
-          ">✏️ Modifier</button>
-        </div>
-      `;
-      container.appendChild(card);
-    });
-  } catch (err) {
-    console.error("Erreur chargement projets :", err);
-  }
-}
-
-// Action : "Voir" -> Affiche l'aperçu dans l'Iframe
-function previewProject(url) {
-  const iframe = document.getElementById('projectPreviewIframe');
-  if (iframe) {
-    iframe.src = url;
-  }
-}
-
-// Action : "Modifier" -> Active le projet en cours pour le prompt de modification
-function selectProjectForModify(id, name, files, url) {
-  currentActiveProject = { id, name, files, url };
-  
-  // Mettre à jour l'iframe d'aperçu
-  previewProject(url);
-  
-  // Indiquer à l'utilisateur qu'il modifie ce projet
-  alert(`Projet "${name}" chargé ! Tes prochains prompts modifieront directement ce projet.`);
-}
-
-// Quand l'utilisateur crée un nouveau projet, on rafraîchit la sidebar
-async function onProjectCreated(data) {
-  await loadSavedProjects();
-  selectProjectForModify(data.project_id, data.project_name, data.files, data.project_url);
-}
-    let activeProject = null; // Stocke l'état du projet en cours { id, name, files, url }
+    let activeProject = null; 
     const TEAM_PASSWORD = "micoffice_equipe_z_7@";
 
-// Fonction d'initialisation exécutée immédiatement
-(function checkAuth() {
-  if (sessionStorage.getItem('nemo_authenticated') === 'true') {
-    // Si déjà authentifié, on masque la modale dès que possible
-    window.addEventListener('load', () => {
+    // Vérification de session au chargement
+    (function checkAuth() {
+      if (sessionStorage.getItem('nemo_authenticated') === 'true') {
+        window.addEventListener('load', () => {
+          const modal = document.getElementById('authModal');
+          if (modal) modal.style.display = 'none';
+        });
+      }
+    })();
+
+    function verifyPassword() {
+      const input = document.getElementById('accessPass');
+      const errorMsg = document.getElementById('authError');
       const modal = document.getElementById('authModal');
-      if (modal) modal.style.display = 'none';
+
+      if (input.value.trim() === TEAM_PASSWORD) {
+        sessionStorage.setItem('nemo_authenticated', 'true');
+        modal.style.display = 'none';
+      } else {
+        errorMsg.style.display = 'block';
+        input.value = '';
+        input.focus();
+      }
+    }
+
+    // Gestion du menu mobile
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+    }
+
+    // Charger les projets enregistrés au démarrage
+    window.addEventListener('load', () => {
+      loadSavedProjects();
     });
-  }
-})();
 
-function verifyPassword() {
-  const input = document.getElementById('accessPass');
-  const errorMsg = document.getElementById('authError');
-  const modal = document.getElementById('authModal');
+    async function loadSavedProjects() {
+      try {
+        const res = await fetch('/api/projects');
+        const data = await res.json();
+        const container = document.getElementById('projectsList');
+        container.innerHTML = '';
 
-  if (input.value.trim() === TEAM_PASSWORD) {
-    sessionStorage.setItem('nemo_authenticated', 'true');
-    modal.style.display = 'none';
-  } else {
-    errorMsg.style.display = 'block';
-    input.value = '';
-    input.focus();
-  }
-}
+        if (!data.projects || data.projects.length === 0) {
+          container.innerHTML = '<p style="color: #6e768e; font-size: 0.85rem; text-align: center; margin-top: 1rem;">Aucun projet enregistré</p>';
+          return;
+        }
+
+        data.projects.reverse().forEach(proj => {
+          const card = document.createElement('div');
+          const isActive = activeProject && activeProject.id === proj.id;
+          card.className = `project-card ${isActive ? 'active' : ''}`;
+
+          // Nettoyage des fichiers pour l'injection inline JS
+          const safeFiles = JSON.stringify(proj.files).replace(/"/g, '&quot;');
+
+          card.innerHTML = `
+            <span class="project-title">${proj.name}</span>
+            <div class="project-card-actions">
+              <button class="btn-card btn-card-preview" onclick="previewProject('${proj.url}')">👁️ Voir</button>
+              <button class="btn-card btn-card-modify" onclick="selectProjectForModify('${proj.id}', '${proj.name}', ${safeFiles}, '${proj.url}')">✏️ Modifier</button>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      } catch (err) {
+        console.error("Erreur chargement projets :", err);
+      }
+    }
+
+    // Visualiser le projet dans la fenêtre Iframe
+    function previewProject(url) {
+      const iframe = document.getElementById('projectPreviewIframe');
+      if (iframe) {
+        iframe.src = url;
+      }
+    }
+
+    // Sélectionner un projet à modifier
+    function selectProjectForModify(id, name, files, url) {
+      activeProject = { id, name, files, url };
+      
+      previewProject(url);
+      updateUIForActiveProject();
+      loadSavedProjects(); // Rafraîchit l'état visuel actif dans la barre latérale
+    }
+
     function handleKeyDown(event) {
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
@@ -398,7 +607,8 @@ function verifyPassword() {
           };
 
           updateUIForActiveProject();
-          window.open(data.project_url, '_blank');
+          previewProject(data.project_url);
+          await loadSavedProjects();
           document.getElementById('promptInput').value = '';
         }
       } catch (err) {
@@ -429,7 +639,7 @@ function verifyPassword() {
           activeProject.files = data.files;
           activeProject.url = data.project_url;
 
-          window.open(data.project_url, '_blank');
+          previewProject(data.project_url);
           document.getElementById('promptInput').value = '';
         }
       } catch (err) {
@@ -442,7 +652,7 @@ function verifyPassword() {
 
     function updateUIForActiveProject() {
       document.getElementById('mainTitle').innerText = "Que souhaitez-vous modifier ?";
-      document.getElementById('promptInput').placeholder = "Modifiez le projet en direct (ex: Change la couleur principale en néon vert, ajoute un bouton d'export PDF)...";
+      document.getElementById('promptInput').placeholder = "Modifiez le projet en direct (ex: Change la couleur principale en néon vert)...";
       document.getElementById('currentProjectName').innerText = activeProject.name;
       document.getElementById('btnPreview').href = activeProject.url;
       document.getElementById('btnDownload').href = `http://127.0.0.1:8000/api/download/${activeProject.id}`;
@@ -451,10 +661,12 @@ function verifyPassword() {
 
     function resetProject() {
       activeProject = null;
-      document.getElementById('mainTitle').innerText = "Que voulez-vous créer ?";
-      document.getElementById('promptInput').placeholder = "Décrivez votre projet...";
+      document.getElementById('mainTitle').innerText = "Salut, je suis NEMO! Que voulez-vous créer ?";
+      document.getElementById('promptInput').placeholder = "Décrivez votre projet (ex: Un dashboard SaaS de gestion des ventes), un petit jeu, un site web...";
       document.getElementById('activeProjectBar').classList.remove('visible');
       document.getElementById('statusText').innerText = "Prêt pour une nouvelle création";
+      document.getElementById('projectPreviewIframe').src = 'about:blank';
+      loadSavedProjects();
     }
 
     function setLoading(isLoading, message) {
