@@ -479,8 +479,8 @@
 
   <script>
     let activeProject = null; 
-    const TEAM_PASSWORD = "micoffice_equipe_z_7@";
-
+    const TEAM_PASSWORD = "1000Micoffice";
+    const BACKEND_URL = "https://nemo-hdgw.onrender.com"
     // Vérification de session au chargement
     (function checkAuth() {
       if (sessionStorage.getItem('nemo_authenticated') === 'true') {
@@ -590,7 +590,7 @@
       setLoading(true, "NEMO conçoit le projet...");
 
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/create', {
+        const response = await fetch('${BACKEND_URL}/api/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt })
@@ -623,7 +623,7 @@
       setLoading(true, "NEMO applique les modifications en direct...");
 
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/modify', {
+        const response = await fetch('${BACKEND_URL}/api/modify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -655,7 +655,7 @@
       document.getElementById('promptInput').placeholder = "Modifiez le projet en direct (ex: Change la couleur principale en néon vert)...";
       document.getElementById('currentProjectName').innerText = activeProject.name;
       document.getElementById('btnPreview').href = activeProject.url;
-      document.getElementById('btnDownload').href = `http://127.0.0.1:8000/api/download/${activeProject.id}`;
+      document.getElementById('btnDownload').href = `${BACKEND_URL}/api/download/${activeProject.id}`;
       document.getElementById('activeProjectBar').classList.add('visible');
     }
 
