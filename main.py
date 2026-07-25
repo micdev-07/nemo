@@ -18,7 +18,7 @@ app = FastAPI(title="NEMO Studio API", version="2.0.0")
 # Support du CORS pour connecter facilement ton Front-end
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://nemostudio.netlify.app/"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
