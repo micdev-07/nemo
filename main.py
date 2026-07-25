@@ -12,6 +12,7 @@ from google.genai import types
 from dotenv import load_dotenv
 
 load_dotenv()
+
 def clean_json_response(text: str) -> str:
     # 1. Retirer le wrapper markdown ```json ... ```
     text = re.sub(r"^```json\s*", "", text, flags=re.MULTILINE)
@@ -22,12 +23,10 @@ def clean_json_response(text: str) -> str:
     text = text.replace("\\\\'", "'").replace("\\'", "'")
     
     return text
-app = FastAPI(title="NEMO Engine - Full Featured")
-PROJECTS_DIR = "generated_projects"
-os.makedirs(PROJECTS_DIR, exist_ok=True)
 
-# Monter le dossier static pour la visualisation directe des projets
-app.mount("/view", StaticFiles(directory=PROJECTS_DIR, html=True), name="view")
+app = FastAPI(title="NEMO Engine - Full Featured")
+
+# Autoriser les requêtes depuis ton frontend Netlify
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://leafy-stardust-02122c.netlify.app"],
@@ -36,13 +35,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-os.makedirs("output_projects", exist_ok=True)
-app.mount("/projects", StaticFiles(directory="output_projects"), name="projects")
+# Dossier unique pour stocker et servir les projets
+PROJECTS_DIR = "output_projects"
+os.makedirs(PROJECTS_DIR, exist_ok=True)
+
+# Servir les projets générés en statique pour la visualisation directe
+app.mount("/projects", StaticFiles(directory=PROJECTS_DIR, html=True), name="projects")
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+BACKEND_URL = os.getenv("BACKEND_URL", "https://nemo-hdgw.onrender.com")
 
 class NewProjectRequest(BaseModel):
     prompt: str
@@ -89,8 +93,9 @@ CONSIGNE D'ARCHITECTURE MULTI-FICHIERS (CRITIQUE) :
 - Tu peux créer plusieurs pages HTML (ex: index.html, patients.html, appointments.html) OU une structure modulaire avec plusieurs scripts JS (ex: js/app.js, js/patients.js, js/chart.js).
 - Assure-toi que tous les liens du menu (href) et les scripts (src) pointent vers des fichiers réels existants dans ton objet JSON.
 - Assure toi qu'il y a une possibilité, une faciliter de naviguer entre différents pages du projet (si il y en a). Pas question d se trouver piegé sur une page x.
-- Si le projet inclus la bd supabase, assure toi que le projet gérè trop bien les différent rêquetes (pour afficher par example les informations de la bd si besoin, ... que tout sur l db fonctionne 
+- Si le projet inclus la bd supabase,手 assure toi que le projet gérè trop bien les différent rêquetes (pour afficher par example les informations de la bd si besoin, ... que tout sur l db fonctionne 
 - Assure toi que tout ce que tu créer offre une meilleur experience utilisateur sur ordinateur comme sur mobile.
+
 FORMAT DE SORTIE STRICT (JSON) :
 Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide :
 
@@ -103,21 +108,17 @@ Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide :
     "./js/main.js": "<... JS principal ...>",
     "./js/patients.js": "<... Logique patients ...>"
   }}
-N.B: Vous pouvez créer autant de fichier (html, js) possible selon le besoin du projt, donc ne vous empechez pas à le faire. Vous n'êtes pas obligé à rester sur 2 ficheirs html et 2 autres Js seulement, aller même au délà selon le projet.
 }}
 """
 
 def save_project_to_disk(project_id, files):
     clean_id = re.sub(r'[^\w\-]', '_', project_id).lower()
-    output_dir = os.path.join("output_projects", clean_id)
+    output_dir = os.path.join(PROJECTS_DIR, clean_id)
     os.makedirs(output_dir, exist_ok=True)
     
     for file_path, content in files.items():
-        # Sécuriser le chemin pour éviter la traversée de répertoire (ex: ../)
         clean_relative_path = os.path.normpath(file_path).lstrip("\\/")
         full_file_path = os.path.join(output_dir, clean_relative_path)
-        
-        # Créer les sous-dossiers automatiquement (ex: output_projects/mon_projet/js/pages/)
         os.makedirs(os.path.dirname(full_file_path), exist_ok=True)
         
         with open(full_file_path, "w", encoding="utf-8") as f:
@@ -128,13 +129,11 @@ def save_project_to_disk(project_id, files):
 @app.get("/api/projects")
 async def list_projects():
     projects = []
-    output_dir = "output_projects"
     
-    if os.path.exists(output_dir):
-        for folder in os.listdir(output_dir):
-            folder_path = os.path.join(output_dir, folder)
+    if os.path.exists(PROJECTS_DIR):
+        for folder in os.listdir(PROJECTS_DIR):
+            folder_path = os.path.join(PROJECTS_DIR, folder)
             if os.path.isdir(folder_path):
-                # Lire les fichiers du projet
                 project_files = {}
                 for root, _, files in os.walk(folder_path):
                     for file in files:
@@ -181,26 +180,20 @@ async def create_project(req: NewProjectRequest):
                 project_data = json.loads(match.group(0), strict=False)
             else:
                 raise parse_err
-        project_id = save_project_to_disk(
-            project_data.get("project_name", "projet_nemo"), 
-            project_data.get("files", {})
-        )
-        project_path = os.path.join(PROJECTS_DIR, project_id)
-    os.makedirs(project_path, exist_ok=True)
 
-    for file_name, content in files.items():
-        file_full_path = os.path.join(project_path, file_name)
-        with open(file_full_path, "w", encoding="utf-8") as f:
-            f.write(content)
-            
-        project_url = BACKEND_URL +"/projects/{project_id}/index.html"
+        files = project_data.get("files", {})
+        project_name = project_data.get("project_name", "projet_nemo")
+        
+        # Sauvegarde automatique de tous les fichiers (HTML, CSS, JS) sur le disque
+        project_id = save_project_to_disk(project_name, files)
+        project_url = f"{BACKEND_URL}/projects/{project_id}/index.html"
         
         return {
             "status": "success",
             "project_id": project_id,
-            "project_name": project_data.get("project_name", "Projet NEMO"),
+            "project_name": project_name.replace("_", " ").title(),
             "project_url": project_url,
-            "files": project_data.get("files", {})
+            "files": files
         }
     except Exception as e:
         print(f"Erreur NEMO : {e}")
@@ -241,21 +234,18 @@ Mets à jour l'application en conservant sa cohérence et en appliquant exacteme
                 project_data = json.loads(match.group(0), strict=False)
             else:
                 raise parse_err
-        save_project_to_disk(req.project_id, project_data.get("files", {}))
-        project_path = os.path.join(PROJECTS_DIR, project_id)
-    os.makedirs(project_path, exist_ok=True)
 
-    for file_name, content in files.items():
-        file_full_path = os.path.join(project_path, file_name)
-        with open(file_full_path, "w", encoding="utf-8") as f:
-            f.write(content)
-        project_url = BACKEND_URL +/projects/{req.project_id}/index.html"
+        files = project_data.get("files", {})
+        
+        # Mettre à jour les fichiers sauvegardés sur disque
+        project_id = save_project_to_disk(req.project_id, files)
+        project_url = f"{BACKEND_URL}/projects/{project_id}/index.html"
         
         return {
             "status": "success",
-            "project_id": req.project_id,
+            "project_id": project_id,
             "project_url": project_url,
-            "files": project_data.get("files", {})
+            "files": files
         }
     except Exception as e:
         print(f"Erreur Modification NEMO : {e}")
@@ -264,16 +254,16 @@ Mets à jour l'application en conservant sa cohérence et en appliquant exacteme
 @app.get("/api/download/{project_id}")
 async def download_project_zip(project_id: str):
     clean_id = re.sub(r'[^\w\-]', '_', project_id).lower()
-    project_dir = os.path.join("output_projects", clean_id)
+    project_dir = os.path.join(PROJECTS_DIR, clean_id)
     
     if not os.path.exists(project_dir):
         raise HTTPException(status_code=404, detail="Projet non trouvé")
     
     zip_filename = f"{clean_id}.zip"
-    zip_path = os.path.join("output_projects", zip_filename)
+    zip_path = os.path.join(PROJECTS_DIR, zip_filename)
     
     # Création du fichier ZIP
-    shutil.make_archive(os.path.join("output_projects", clean_id), 'zip', project_dir)
+    shutil.make_archive(os.path.join(PROJECTS_DIR, clean_id), 'zip', project_dir)
     
     return FileResponse(
         path=zip_path, 
