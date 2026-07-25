@@ -14,7 +14,6 @@
       --color-aqua: #00f0ff;
       --color-aqua-hover: #33f3ff;
       --color-amber: #ffb703;
-      --color-danger: #ff4a4a;
       --text-main: #f0f2f5;
       --text-muted: #6e768e;
       --sidebar-width: 320px;
@@ -31,7 +30,7 @@
       overflow: hidden;
     }
 
-    /* --- SIDEBAR LATÉRALE --- */
+    /* SIDEBAR */
     .sidebar {
       width: var(--sidebar-width);
       background-color: var(--bg-sidebar);
@@ -45,21 +44,15 @@
 
     .sidebar-overlay {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.5);
-      opacity: 0;
-      pointer-events: none;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      opacity: 0; pointer-events: none;
       transition: opacity 0.3s ease;
       z-index: 998;
     }
 
-    .sidebar-overlay.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
+    .sidebar-overlay.active { opacity: 1; pointer-events: auto; }
 
     .sidebar-header {
       padding: 1.5rem;
@@ -69,292 +62,93 @@
       align-items: center;
     }
 
-    .brand-box {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-    }
-
-    .logo-text {
-      font-size: 1.3rem;
-      font-weight: 900;
-      letter-spacing: 0.15em;
-      color: var(--color-aqua);
-    }
-
-    .badge-labs {
-      font-size: 0.65rem;
-      background: rgba(0, 240, 255, 0.1);
-      color: var(--color-aqua);
-      border: 1px solid rgba(0, 240, 255, 0.3);
-      padding: 0.2rem 0.5rem;
-      border-radius: 20px;
-      font-weight: 600;
-    }
-
-    .close-btn {
-      background: none;
-      border: none;
-      color: var(--color-aqua);
-      font-size: 1.2rem;
-      cursor: pointer;
-      display: none;
-    }
+    .brand-box { display: flex; align-items: center; gap: 0.6rem; }
+    .logo-text { font-size: 1.3rem; font-weight: 900; letter-spacing: 0.15em; color: var(--color-aqua); }
+    .badge-labs { font-size: 0.65rem; background: rgba(0, 240, 255, 0.1); color: var(--color-aqua); border: 1px solid rgba(0, 240, 255, 0.3); padding: 0.2rem 0.5rem; border-radius: 20px; font-weight: 600; }
+    .close-btn { background: none; border: none; color: var(--color-aqua); font-size: 1.2rem; cursor: pointer; display: none; }
 
     .btn-new-project {
-      margin: 1rem 1.2rem 0.5rem 1.2rem;
-      padding: 0.75rem;
-      background: rgba(0, 240, 255, 0.08);
-      border: 1px dashed var(--color-aqua);
-      color: var(--color-aqua);
-      border-radius: 10px;
-      font-weight: 700;
-      font-size: 0.85rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
+      margin: 1rem 1.2rem 0.5rem 1.2rem; padding: 0.75rem;
+      background: rgba(0, 240, 255, 0.08); border: 1px dashed var(--color-aqua);
+      color: var(--color-aqua); border-radius: 10px; font-weight: 700;
+      font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
       transition: all 0.2s;
     }
 
-    .btn-new-project:hover {
-      background: var(--color-aqua);
-      color: var(--bg-dark);
-    }
+    .btn-new-project:hover { background: var(--color-aqua); color: var(--bg-dark); }
 
-    .projects-container {
-      flex: 1;
-      overflow-y: auto;
-      padding: 1rem 1.2rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-    }
-
-    .projects-container::-webkit-scrollbar { width: 5px; }
-    .projects-container::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
-
-    .project-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      padding: 0.8rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-      transition: border-color 0.2s;
-    }
-
-    .project-card:hover { border-color: rgba(0, 240, 255, 0.4); }
+    .projects-container { flex: 1; overflow-y: auto; padding: 1rem 1.2rem; display: flex; flex-direction: column; gap: 0.8rem; }
+    .project-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.8rem; display: flex; flex-direction: column; gap: 0.6rem; }
     .project-card.active { border-color: var(--color-aqua); background: rgba(0, 240, 255, 0.03); }
-
-    .project-title {
-      font-weight: bold;
-      font-size: 0.88rem;
-      color: #e2e8f0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
+    .project-title { font-weight: bold; font-size: 0.88rem; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .project-card-actions { display: flex; gap: 0.5rem; }
+    .btn-card { flex: 1; background: #161926; border: 1px solid var(--border-color); border-radius: 6px; padding: 0.4rem; font-size: 0.75rem; cursor: pointer; font-weight: bold; text-decoration: none; text-align: center; }
 
-    .btn-card {
-      flex: 1;
-      background: #161926;
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      padding: 0.4rem;
-      font-size: 0.75rem;
-      cursor: pointer;
-      font-weight: bold;
-      text-decoration: none;
-      text-align: center;
-      transition: all 0.2s;
-    }
+    .sidebar-footer { padding: 1rem; border-top: 1px solid var(--border-color); font-size: 0.75rem; color: var(--text-muted); text-align: center; }
 
-    .btn-card-preview { color: var(--color-aqua); }
-    .btn-card-preview:hover { background: rgba(0, 240, 255, 0.1); }
+    /* WORKSPACE */
+    .main-workspace { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-    .btn-card-modify { color: var(--color-amber); }
-    .btn-card-modify:hover { background: rgba(255, 183, 3, 0.1); }
-
-    .sidebar-footer {
-      padding: 1rem;
-      border-top: 1px solid var(--border-color);
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      text-align: center;
-    }
-
-    /* --- ZONE PRINCIPALE DE TRAVAIL --- */
-    .main-workspace {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      overflow: hidden;
-      position: relative;
-    }
-
-    .top-bar {
-      padding: 1rem 2rem;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--bg-dark);
-    }
-
-    .mobile-menu-toggle {
-      display: none;
-      background: none;
-      border: none;
-      color: var(--text-main);
-      font-size: 1.5rem;
-      cursor: pointer;
-    }
-
-    .status-badge { font-size: 0.85rem; color: var(--text-muted); }
+    .top-bar { padding: 0.8rem 1.2rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 1rem; background: var(--bg-dark); min-height: 60px; }
+    .mobile-menu-toggle { display: none; background: transparent; border: 1px solid var(--border-color); color: var(--color-aqua); padding: 0.4rem 0.7rem; border-radius: 8px; font-size: 1.2rem; cursor: pointer; }
+    .status-badge { font-size: 0.82rem; color: var(--text-muted); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     .workspace-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 1.5rem;
-      gap: 1.5rem;
-      overflow-y: auto;
+      flex: 1; display: flex; flex-direction: column; align-items: center; padding: 1rem; gap: 1rem; overflow-y: auto;
     }
 
-    .main-title {
-      font-size: 2rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, #ffffff 0%, #8a90a0 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-align: center;
-    }
+    .main-title { font-size: 1.6rem; font-weight: 800; background: linear-gradient(135deg, #ffffff 0%, #8a90a0 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; }
 
-    .big_T {
-      font-size: 1.2rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-align: center;
-      margin-top: -0.8rem;
-    }
-
-    .active-project-bar {
-      display: none;
-      width: 100%;
-      max-width: 900px;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      padding: 0.8rem 1.2rem;
-      border-radius: 12px;
-    }
-
-    .active-project-bar.visible { display: flex; }
-
-    .action-group { display: flex; gap: 0.5rem; }
-
-    .btn-action {
-      background: transparent;
-      border: 1px solid var(--color-aqua);
-      color: var(--color-aqua);
-      padding: 0.4rem 0.9rem;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      text-decoration: none;
-      font-size: 0.82rem;
-      transition: background 0.2s, color 0.2s;
-    }
-
-    .btn-action:hover { background: var(--color-aqua); color: var(--bg-dark); }
-
+    /* PROMPT WRAPPER */
     .prompt-wrapper {
-      position: relative;
-      width: 100%;
-      max-width: 900px;
-      background-color: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 1rem;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      transition: border-color 0.3s;
+      position: relative; width: 100%; max-width: 900px;
+      background-color: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: 16px; padding: 0.8rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
-
-    .prompt-wrapper:focus-within { border-color: var(--color-aqua); }
 
     .prompt-input {
-      width: 100%;
-      height: 100px;
-      background: transparent;
-      border: none;
-      outline: none;
-      color: var(--text-main);
-      font-size: 1rem;
-      resize: none;
-      font-family: inherit;
+      width: 100%; height: 80px; background: transparent; border: none; outline: none;
+      color: var(--text-main); font-size: 0.95rem; resize: none; font-family: inherit;
+      padding-right: 60px; line-height: 1.4;
     }
 
     .send-btn {
-      position: absolute;
-      bottom: 12px;
-      right: 12px;
-      width: 42px;
-      height: 42px;
-      border-radius: 10px;
-      background: var(--color-aqua);
-      border: none;
-      color: var(--bg-dark);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.2s, background 0.2s;
+      position: absolute; bottom: 12px; right: 12px; width: 44px; height: 44px;
+      border-radius: 10px; background: var(--color-aqua); border: none; color: var(--bg-dark);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
     }
 
-    .send-btn:hover { background: var(--color-aqua-hover); transform: scale(1.05); }
-    .send-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
-    .send-btn svg { width: 20px; height: 20px; fill: currentColor; }
-
-    #authModal {
-      position: fixed;
-      top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(7, 8, 11, 0.95);
-      backdrop-filter: blur(10px);
-      z-index: 9999;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+    /* ZONE DE PRÉVISUALISATION + ACTIONS */
+    .preview-container {
+      width: 100%; max-width: 900px; flex: 1; min-height: 420px;
+      background: #000; border: 1px solid var(--border-color); border-radius: 12px;
+      display: none; flex-direction: column; overflow: hidden; margin-top: 0.5rem;
     }
 
-    .auth-box {
-      background: #0f111a;
-      border: 1px solid #23283b;
-      padding: 2.5rem;
-      border-radius: 16px;
-      text-align: center;
-      max-width: 400px;
-      width: 90%;
-      box-shadow: 0 10px 40px rgba(0, 240, 255, 0.1);
+    .preview-container.visible { display: flex; }
+
+    .preview-header {
+      background: var(--bg-card); padding: 0.6rem 1rem; border-bottom: 1px solid var(--border-color);
+      display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; flex-wrap: wrap; gap: 0.5rem;
     }
+
+    .preview-actions { display: flex; gap: 0.6rem; align-items: center; }
+
+    .btn-download {
+      background: rgba(0, 240, 255, 0.1); border: 1px solid var(--color-aqua);
+      color: var(--color-aqua); padding: 0.3rem 0.7rem; border-radius: 6px;
+      text-decoration: none; font-weight: bold; font-size: 0.78rem; transition: all 0.2s;
+    }
+
+    .btn-download:hover { background: var(--color-aqua); color: var(--bg-dark); }
+
+    .preview-frame { width: 100%; height: 100%; border: none; background: #fff; }
+
+    #authModal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(7, 8, 11, 0.95); z-index: 9999; display: flex; justify-content: center; align-items: center; }
+    .auth-box { background: #0f111a; border: 1px solid #23283b; padding: 2.5rem; border-radius: 16px; text-align: center; max-width: 400px; width: 90%; }
 
     @media (max-width: 768px) {
-      .sidebar {
-        position: fixed;
-        top: 0;
-        left: -320px;
-        width: 320px;
-        height: 100vh;
-        transition: transform 0.3s ease;
-      }
+      .sidebar { position: fixed; top: 0; left: -320px; width: 320px; height: 100vh; }
       .sidebar.open { transform: translateX(320px); }
       .mobile-menu-toggle { display: block; }
       .close-btn { display: block; }
@@ -363,27 +157,210 @@
 </head>
 <body>
 
-  <!-- MODAL D'AUTHENTIFICATION -->
   <div id="authModal">
     <div class="auth-box">
-      <h2 style="color: #00f0ff; margin-bottom: 0.5rem; font-size: 1.5rem;">NEMO STUDIO</h2>
-      <p style="color: #6e768e; font-size: 0.85rem; margin-bottom: 1.5rem;">Accès restreint à l'équipe Micoffice Labs (EQUIPE Z)</p>
-      
-      <input type="password" id="accessPass" placeholder="Mot de passe d'accès..." style="
-        width: 100%; padding: 0.8rem 1rem; background: #161926; border: 1px solid #23283b;
-        border-radius: 8px; color: #fff; margin-bottom: 1rem; outline: none; font-size: 0.95rem;
-      " onkeydown="if(event.key === 'Enter') verifyPassword()">
-
-      <button onclick="verifyPassword()" style="
-        width: 100%; padding: 0.8rem; background: #00f0ff; border: none; border-radius: 8px;
-        color: #07080b; font-weight: bold; cursor: pointer; transition: background 0.2s;
-      ">Déverrouiller l'accès</button>
-      
+      <h2 style="color: #00f0ff; margin-bottom: 0.5rem;">NEMO STUDIO</h2>
+      <p style="color: #6e768e; font-size: 0.85rem; margin-bottom: 1.5rem;">Accès restreint à l'équipe Micoffice Labs</p>
+      <input type="password" id="accessPass" placeholder="Mot de passe..." style="width:100%; padding:0.8rem; background:#161926; border:1px solid #23283b; color:#fff; border-radius:8px; margin-bottom:1rem;" onkeydown="if(event.key === 'Enter') verifyPassword()">
+      <button onclick="verifyPassword()" style="width:100%; padding:0.8rem; background:#00f0ff; border:none; border-radius:8px; color:#07080b; font-weight:bold; cursor:pointer;">Déverrouiller</button>
       <p id="authError" style="color: #ff4a4a; font-size: 0.8rem; margin-top: 0.8rem; display: none;">Mot de passe incorrect !</p>
     </div>
   </div>
 
   <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand-box">
+        <span class="logo-text">NEMO STUDIO</span>
+        <span class="badge-labs">Micoffice Labs</span>
+      </div>
+      <button class="close-btn" onclick="closeSidebar()">✕</button>
+    </div>
+    <button class="btn-new-project" onclick="resetProject()"><span>+</span> Nouveau Projet</button>
+    <div id="projectsList" class="projects-container"></div>
+    <div class="sidebar-footer">Propulsé par <strong>Micoffice Labs</strong></div>
+  </aside>
+
+  <main class="main-workspace">
+    <header class="top-bar">
+      <button class="mobile-menu-toggle" onclick="toggleSidebar()">☰</button>
+      <div id="statusText" class="status-badge">Prêt pour une nouvelle création</div>
+    </header>
+
+    <div class="workspace-content">
+      <h1 id="mainTitle" class="main-title">Je suis NEMO, décrivez-moi votre idée.</h1>
+
+      <div class="prompt-wrapper">
+        <textarea id="promptInput" class="prompt-input" placeholder="Décrivez votre projet..." onkeydown="handleKeyDown(event)"></textarea>
+        <button id="sendBtn" class="send-btn" onclick="handleSubmit()">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+        </button>
+      </div>
+
+      <!-- ZONE DE PRÉVISUALISATION + BOUTON TÉLÉCHARGEMENT -->
+      <div id="previewContainer" class="preview-container">
+        <div class="preview-header">
+          <span id="previewTitle" style="color: var(--color-aqua); font-weight: bold;">Aperçu du projet</span>
+          <div class="preview-actions">
+            <a id="btnDownload" href="#" class="btn-download">📦 Télécharger ZIP</a>
+            <a id="extLink" href="#" target="_blank" style="color: var(--text-muted); text-decoration: none;">Plein écran ↗</a>
+          </div>
+        </div>
+        <iframe id="projectIframe" class="preview-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let activeProject = null;
+    const TEAM_PASSWORD = "1000Micoffice";
+    const BACKEND_URL = "https://nemo-hdgw.onrender.com";
+
+    (function checkAuth() {
+      if (sessionStorage.getItem('nemo_authenticated') === 'true') {
+        window.addEventListener('load', () => {
+          document.getElementById('authModal').style.display = 'none';
+        });
+      }
+    })();
+
+    function verifyPassword() {
+      if (document.getElementById('accessPass').value.trim() === TEAM_PASSWORD) {
+        sessionStorage.setItem('nemo_authenticated', 'true');
+        document.getElementById('authModal').style.display = 'none';
+      } else {
+        document.getElementById('authError').style.display = 'block';
+      }
+    }
+
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sidebarOverlay').classList.toggle('active'); }
+    function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('active'); }
+
+    window.addEventListener('load', loadSavedProjects);
+
+    function getStoredProjects() {
+      return JSON.parse(localStorage.getItem('nemo_projects') || '[]');
+    }
+
+    function saveProjectToStorage(proj) {
+      let projects = getStoredProjects();
+      const idx = projects.findIndex(p => p.id === proj.id);
+      if (idx >= 0) projects[idx] = proj; else projects.push(proj);
+      localStorage.setItem('nemo_projects', JSON.stringify(projects));
+    }
+
+    function loadSavedProjects() {
+      const container = document.getElementById('projectsList');
+      container.innerHTML = '';
+      getStoredProjects().reverse().forEach(proj => {
+        const card = document.createElement('div');
+        card.className = `project-card ${activeProject && activeProject.id === proj.id ? 'active' : ''}`;
+        card.innerHTML = `
+          <span class="project-title">${proj.name}</span>
+          <div class="project-card-actions">
+            <button class="btn-card" style="color: var(--color-aqua)" onclick="displayProject('${proj.id}')">✏️ Voir / Modifier</button>
+          </div>`;
+        container.appendChild(card);
+      });
+    }
+
+    function displayProject(id) {
+      const proj = getStoredProjects().find(p => p.id === id);
+      if (proj) {
+        activeProject = proj;
+        updateUI();
+        closeSidebar();
+      }
+    }
+
+    function handleKeyDown(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }
+
+    async function handleSubmit() {
+      const prompt = document.getElementById('promptInput').value.trim();
+      if (!prompt) return;
+
+      if (!activeProject) await createProject(prompt);
+      else await modifyProject(prompt);
+    }
+
+    async function createProject(prompt) {
+      setLoading(true, "NEMO génère le projet...");
+      try {
+        const res = await fetch(BACKEND_URL + '/api/create', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ prompt })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          activeProject = {
+            id: data.project_id,
+            name: prompt.substring(0, 25) + '...',
+            url: data.project_url,
+            files: data.files
+          };
+          saveProjectToStorage(activeProject);
+          updateUI();
+        }
+      } catch (err) { alert("Erreur lors de la création"); }
+      finally { setLoading(false, "Projet affiché !"); }
+    }
+
+    async function modifyProject(prompt) {
+      setLoading(true, "Modifications en cours...");
+      try {
+        const res = await fetch(BACKEND_URL + '/api/modify', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ project_id: activeProject.id, prompt, current_files: activeProject.files })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          activeProject.files = data.files;
+          saveProjectToStorage(activeProject);
+          updateUI();
+        }
+      } catch (err) { alert("Erreur lors de la modification"); }
+      finally { setLoading(false, "Modifications appliquées !"); }
+    }
+
+    function updateUI() {
+      document.getElementById('mainTitle').innerText = "Que souhaitez-vous modifier ?";
+      document.getElementById('promptInput').value = '';
+      document.getElementById('previewContainer').classList.add('visible');
+      document.getElementById('extLink').href = activeProject.url;
+      document.getElementById('previewTitle').innerText = activeProject.name;
+      
+      // MISE À JOUR DU LIEN DE TÉLÉCHARGEMENT ZIP
+      document.getElementById('btnDownload').href = `${BACKEND_URL}/api/download/${activeProject.id}`;
+
+      // Injection dans l'Iframe
+      const iframe = document.getElementById('projectIframe');
+      if (activeProject.files && activeProject.files['index.html']) {
+        iframe.srcdoc = activeProject.files['index.html'];
+      } else {
+        iframe.src = activeProject.url + '?t=' + Date.now();
+      }
+      loadSavedProjects();
+    }
+
+    function resetProject() {
+      activeProject = null;
+      document.getElementById('mainTitle').innerText = "Je suis NEMO, décrivez-moi votre idée.";
+      document.getElementById('previewContainer').classList.remove('visible');
+      loadSavedProjects();
+    }
+
+    function setLoading(loading, msg) {
+      document.getElementById('promptInput').disabled = loading;
+      document.getElementById('sendBtn').disabled = loading;
+      document.getElementById('statusText').innerText = msg;
+    }
+  </script>
+</body>
+</html>
+barOverlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
 
   <!-- BARRE LATÉRALE : PROJETS -->
   <aside id="sidebar" class="sidebar">
