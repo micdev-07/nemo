@@ -1,119 +1,66 @@
 import os
-import time
-import json
 import re
+import json
+import time
 import shutil
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from typing import Dict
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from google import genai
 from google.genai import types
-from dotenv import load_dotenv
-from typing import Dict, Any
 
-load_dotenv()
+# --- CONFIGURATION INITIALE ---
+app = FastAPI(title="NEMO Studio API", version="2.0.0")
 
-def clean_json_response(text: str) -> str:
-    # 1. Retirer le wrapper markdown ```json ... ```
-    text = re.sub(r"^```json\s*", "", text, flags=re.MULTILINE)
-    text = re.sub(r"^```\s*", "", text, flags=re.MULTILINE)
-    text = text.strip()
-    
-    # 2. Nettoyer les faux échappements quadruplés (\\\\') sans casser le JS
-    text = text.replace("\\\\'", "'").replace("\\'", "'")
-    
-    return text
-
-app = FastAPI(title="NEMO Engine - Full Featured")
-
-# Autoriser les requêtes depuis ton frontend Netlify
+# Support du CORS pour connecter facilement ton Front-end
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://leafy-stardust-02122c.netlify.app"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Dossier unique pour stocker et servir les projets
-PROJECTS_DIR = "output_projects"
+# Dossier local de stockage temporaire des projets rendus
+PROJECTS_DIR = "projects"
 os.makedirs(PROJECTS_DIR, exist_ok=True)
+app.mount("/projects", StaticFiles(directory=PROJECTS_DIR), name="projects")
 
-# Servir les projets générés en statique pour la visualisation directe
-app.mount("/projects", StaticFiles(directory=PROJECTS_DIR, html=True), name="projects")
-
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+# Initialisation du client SDK Gemini (utilise la variable d'environnement GEMINI_API_KEY)
+client = genai.Client()
 BACKEND_URL = os.getenv("BACKEND_URL", "https://nemo-hdgw.onrender.com")
 
-class NewProjectRequest(BaseModel):
+# --- PROMPT SYSTÈME (SPÉCIALISTE FRONT-END & UI/UX) ---
+SYSTEM_PROMPT_NEMO = """
+Tu es NEMO, un développeur Front-end d'élite et UI/UX Designer d'exception.
+Ton objectif est de concevoir des applications web Single Page (SPA), des portfolios, des landing pages et des outils web d'une qualité visuelle et fonctionnelle "Masterclass" (niveau Awwwards).
+
+REGLES ET EXPERTISE TECHNIQUE :
+1. PURE FRONT-END : Génère uniquement du HTML, CSS et JavaScript côté client. N'utilise AUCUN backend, ni API externe nécessitant des clés d'accès.
+2. PERSISTANCE LOCALE (`localStorage`) : Si l'application nécessite de sauvegarder un état (score de jeu, panier fictif, préférences, tâches, formulaire), utilise exclusivement le `localStorage` du navigateur.
+3. EXCELLENCE VISUELLE & UI/UX :
+   - Design ultra moderne (gradients subtils, glassmorphism, animations fluides `@keyframes`, typographies Google Fonts, icônes SVG/Lucide).
+   - Layout 100% Responsive (Mobile-First, Flexbox, CSS Grid).
+   - Code complet, propre, réactif, sans placeholders ni commentaires TODO.
+4. FORMAT DE RÉPONSE STRICT :
+   Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide contenant la clé "files" avec tous les fichiers du projet (ex: index.html, style.css, script.js).
+"""
+
+# --- MODÈLES DE REQUÊTE ---
+class CreateProjectRequest(BaseModel):
     prompt: str
 
 class ModifyProjectRequest(BaseModel):
     project_id: str
     prompt: str
-    current_files: dict
+    current_files: Dict[str, str]
 
-SYSTEM_PROMPT_NEMO = f"""
-Tu es NEMO, un agent d'action IA et Lead Designer / Architecte Logiciel Fullstack développé par Micoffice Labs.
-Ton rôle est de concevoir et modifier tout type d'application web moderne, immersive, riche et totalement fonctionnelle (E-commerce, SaaS, Dashboard, Canvas, Outils, Jeux, Portfolios, etc.).
-
-INTERDICTION STRICTE :
-- Ne génère JAMAIS d'application de type Réseau Social (fil d'actualité, posts type Twitter/Facebook/Instagram).
-
-DIRECTIVES D'EXCELLENCE :
-
-1. GESTION DES IMAGES & MÉDIAS :
-   - Si le site/projet nécessite des images (ex: produits e-commerce, avatars, bannières, cartes de contenu) :
-   - Récupère et intègre TOUJOURS des images réelles, esthétiques et directement pertinentes.
-   - Utilise des URLs d'images directes provenant d'Unsplash (`https://images.unsplash.com/...`), Pexels ou Picsum (`https://picsum.photos/...`).
-   - Ne laisse JAMAIS de conteneurs d'images vides ou de simples placeholders génériques.
-
-2. DESIGN & ERGONOMIE :
-   - Interfaces modernes : Thème sombre ou clair adapté, Glassmorphism, néons pas génants, animations CSS fluides, responsive design.
-
-3. PERSISTANCE DE DONNÉES (SUPABASE & LOCALSTORAGE) :
-   - Si besoin de données dynamiques (panier, tâches, produits, réglages, formulaires) :
-     - Inclus le SDK Supabase dans `index.html` :
-       `<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>`
-     - Initialise Supabase dans `app.js` avec :
-       `const SUPABASE_URL = "{SUPABASE_URL}";`
-       `const SUPABASE_ANON_KEY = "{SUPABASE_ANON_KEY}";`
-       `const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);`
-     - Mets en place la logique d'interaction BDD (avec fallback automatique sur `localStorage`).
-
-4. FORMAT DE SORTIE STRICT :
-   Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide sans aucune balise markdown :
-
-CONSIGNE D'ARCHITECTURE MULTI-FICHIERS (CRITIQUE) :
-- Ne te limite PAS à un seul fichier HTML ou JS monolithique.
-- Découpe le projet en autant de fichiers que nécessaire pour garantir un fonctionnement complet sans code tronqué.
-- Tu peux créer plusieurs pages HTML (ex: index.html, patients.html, appointments.html) OU une structure modulaire avec plusieurs scripts JS (ex: js/app.js, js/patients.js, js/chart.js).
-- Assure-toi que tous les liens du menu (href) et les scripts (src) pointent vers des fichiers réels existants dans ton objet JSON.
-- Assure toi qu'il y a une possibilité, une faciliter de naviguer entre différents pages du projet (si il y en a). Pas question d se trouver piegé sur une page x.
-- Si le projet inclus la bd supabase,手 assure toi que le projet gérè trop bien les différent rêquetes (pour afficher par example les informations de la bd si besoin, ... que tout sur l db fonctionne 
-- Assure toi que tout ce que tu créer offre une meilleur experience utilisateur sur ordinateur comme sur mobile.
-
-FORMAT DE SORTIE STRICT (JSON) :
-Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide :
-
-{{
-  "project_name": "nom_du_projet",
-  "files": {{
-    "index.html": "<... HTML5 principal ...>",
-    "patients.html": "<... Page patients ...>",
-    "./styles/styles.css": "<... Styles CSS modernes ...>",
-    "./js/main.js": "<... JS principal ...>",
-    "./js/patients.js": "<... Logique patients ...>"
-  }}
-}}
-"""
-
-def save_project_to_disk(project_id, files):
+# --- FONCTIONS UTILITAIRES ---
+def save_project_to_disk(project_id: str, files: dict) -> str:
+    """Nettoie l'ID du projet et enregistre/écrase les fichiers sur le disque."""
     clean_id = re.sub(r'[^\w\-]', '_', project_id).lower()
     output_dir = os.path.join(PROJECTS_DIR, clean_id)
     os.makedirs(output_dir, exist_ok=True)
@@ -128,81 +75,88 @@ def save_project_to_disk(project_id, files):
             
     return clean_id
 
-@app.get("/api/projects")
-async def list_projects():
-    projects = []
-    
-    if os.path.exists(PROJECTS_DIR):
-        for folder in os.listdir(PROJECTS_DIR):
-            folder_path = os.path.join(PROJECTS_DIR, folder)
-            if os.path.isdir(folder_path):
-                project_files = {}
-                for root, _, files in os.walk(folder_path):
-                    for file in files:
-                        if not file.endswith('.zip'):
-                            full_path = os.path.join(root, file)
-                            rel_path = os.path.relpath(full_path, folder_path).replace("\\", "/")
-                            try:
-                                with open(full_path, "r", encoding="utf-8") as f:
-                                    project_files[rel_path] = f.read()
-                            except Exception:
-                                pass
-                
-                if "index.html" in project_files:
-                    projects.append({
-                        "id": folder,
-                        "name": folder.replace("_", " ").title(),
-                        "url": f"/projects/{folder}/index.html",
-                        "files": project_files
-                    })
-                    
-    return {"projects": projects}
+def clean_json_response(raw_text: str) -> str:
+    """Nettoie les balises markdown ```json éventuelles renvoyées par le LLM."""
+    cleaned = raw_text.strip()
+    if cleaned.startswith("```json"):
+        cleaned = cleaned[7:]
+    elif cleaned.startswith("```"):
+        cleaned = cleaned[3:]
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3]
+    return cleaned.strip()
 
-@app.post("/api/create")
-async def create_project(req: NewProjectRequest):
+def remove_file(path: str):
+    """Fonction de nettoyage en arrière-plan pour supprimer le ZIP temporaire."""
     try:
+        if os.path.exists(path):
+            os.remove(path)
+    except Exception as e:
+        print(f"Erreur lors de la suppression du ZIP temporaire : {e}")
+
+# --- ROUTES API ---
+
+@app.get("/")
+async def root():
+    return {"status": "online", "system": "NEMO Studio Frontend Engine v2.0"}
+
+# 1. CRÉATION D'UN PROJET
+@app.post("/api/create")
+async def create_project(req: CreateProjectRequest):
+    try:
+        project_id = f"nemo_{int(time.time())}"
+        
+        prompt_create = f"""
+{SYSTEM_PROMPT_NEMO}
+
+DEMANDE DE L'UTILISATEUR :
+{req.prompt}
+
+CONSIGNE : Crée une application web / site front-end d'un niveau visuel exceptionnel ("Masterclass").
+"""
         response = client.models.generate_content(
             model='gemini-2.5-flash',
-            contents=f"{SYSTEM_PROMPT_NEMO}\n\nCRÉATION DE PROJET : {req.prompt}",
+            contents=prompt_create,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.4
+                temperature=0.4,
+                max_output_tokens=8192
             )
         )
         
-        raw_text = response.text
-        cleaned_text = clean_json_response(raw_text)
+        cleaned_text = clean_json_response(response.text)
         
         try:
             project_data = json.loads(cleaned_text, strict=False)
-        except Exception as parse_err:
-            print(f"Échec parsing direct, tentative d'extraction JSON... Error: {parse_err}")
-            match = re.search(r'\{.*\}', raw_text, re.DOTALL)
+        except Exception:
+            match = re.search(r'\{.*\}', response.text, re.DOTALL)
             if match:
                 project_data = json.loads(match.group(0), strict=False)
             else:
-                raise parse_err
+                raise ValueError("Impossible de parser le JSON retourné.")
 
-        files = project_data.get("files", {})
-        project_name = project_data.get("project_name", "projet_nemo")
+        files = project_data.get("files", project_data) if isinstance(project_data, dict) else {}
+        if not files or not isinstance(files, dict):
+            raise ValueError("Aucun dictionnaire de fichiers valide reçu.")
+
+        save_project_to_disk(project_id, files)
         
-        # Sauvegarde automatique de tous les fichiers (HTML, CSS, JS) sur le disque
-        project_id = save_project_to_disk(project_name, files)
-        project_url = f"{BACKEND_URL}/projects/{project_id}/index.html"
+        timestamp = int(time.time())
+        project_url = f"{BACKEND_URL}/projects/{project_id}/index.html?t={timestamp}"
         
         return {
             "status": "success",
             "project_id": project_id,
-            "project_name": project_name.replace("_", " ").title(),
             "project_url": project_url,
             "files": files
         }
+
     except Exception as e:
-        print(f"Erreur NEMO : {e}")
+        print(f"Erreur Création NEMO : {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-import time
 
+# 2. MODIFICATION D'UN PROJET EXISTANT
 @app.post("/api/modify")
 async def modify_project(req: ModifyProjectRequest):
     try:
@@ -215,47 +169,45 @@ PROJET ACTUEL AU FORMAT JSON :
 MODIFICATIONS DEMANDÉES PAR L'UTILISATEUR :
 {req.prompt}
 
-Mets à jour l'application en conservant sa cohérence et en appliquant exactement la modification demandée.
+DIRECTIVE STRICTE :
+Conserve la qualité visuelle 'Masterclass'. Intègre la modification demandée sans dégrader le style existant et sans supprimer le travail précédent.
 """
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=prompt_modif,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.3
+                temperature=0.4,
+                max_output_tokens=8192
             )
         )
         
-        raw_text = response.text
-        cleaned_text = clean_json_response(raw_text)
+        cleaned_text = clean_json_response(response.text)
         
         try:
             project_data = json.loads(cleaned_text, strict=False)
-        except Exception as parse_err:
-            print(f"Échec parsing direct (Modify), tentative d'extraction JSON... Error: {parse_err}")
-            match = re.search(r'\{.*\}', raw_text, re.DOTALL)
+        except Exception:
+            match = re.search(r'\{.*\}', response.text, re.DOTALL)
             if match:
                 project_data = json.loads(match.group(0), strict=False)
             else:
-                raise parse_err
+                raise ValueError("Impossible de parser le JSON retourné.")
 
-        # --- CORRECTION 1 : Extraire correctement les fichiers ---
-        # Si le JSON est sous la forme {"files": {"index.html": ...}} on prend "files".
-        # Sinon, si le JSON contient directement {"index.html": ...}, on prend project_data directement.
+        # Extraction sécurisée des fichiers
         if "files" in project_data and isinstance(project_data["files"], dict):
             files = project_data["files"]
-        else:
+        elif isinstance(project_data, dict):
             files = project_data
+        else:
+            files = {}
 
-        # --- CORRECTION 2 : Vérification qu'on a bien des fichiers ---
-        if not files or not isinstance(files, dict):
-            raise ValueError("Aucun fichier valide n'a été extrait du modèle AI.")
+        if not files:
+            raise ValueError("Aucun dictionnaire de fichiers valide reçu.")
 
-        # Sauvegarder/Écraser les fichiers sur le disque de Render
+        # Sauvegarde/Écrasement sur disque
         project_id = save_project_to_disk(req.project_id, files)
         
-        # --- CORRECTION 3 : URL anti-cache avec Timestamp ---
-        # L'ajout de ?t=timestamp évite que le navigateur n'affiche l'ancienne version en cache
+        # Lien avec paramètre anti-cache (?t=)
         timestamp = int(time.time())
         project_url = f"{BACKEND_URL}/projects/{project_id}/index.html?t={timestamp}"
         
@@ -270,8 +222,10 @@ Mets à jour l'application en conservant sa cohérence et en appliquant exacteme
         print(f"Erreur Modification NEMO : {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# 3. TÉLÉCHARGEMENT DU ZIP
 @app.get("/api/download/{project_id}")
-async def download_project_zip(project_id: str):
+async def download_project_zip(project_id: str, background_tasks: BackgroundTasks):
     clean_id = re.sub(r'[^\w\-]', '_', project_id).lower()
     project_dir = os.path.join(PROJECTS_DIR, clean_id)
     
@@ -281,15 +235,14 @@ async def download_project_zip(project_id: str):
     zip_filename = f"{clean_id}.zip"
     zip_path = os.path.join(PROJECTS_DIR, zip_filename)
     
-    # Création du fichier ZIP
+    # Création de l'archive ZIP à partir du dossier projet mis à jour
     shutil.make_archive(os.path.join(PROJECTS_DIR, clean_id), 'zip', project_dir)
+    
+    # Suppression automatique du fichier zip sur le serveur après le téléchargement
+    background_tasks.add_task(remove_file, zip_path)
     
     return FileResponse(
         path=zip_path, 
         filename=zip_filename, 
         media_type='application/zip'
     )
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
