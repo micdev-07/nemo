@@ -1,4 +1,5 @@
 import os
+import time
 import json
 import re
 import shutil
@@ -10,6 +11,7 @@ from pydantic import BaseModel
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
+from typing import Dict, Any
 
 load_dotenv()
 
@@ -199,6 +201,8 @@ async def create_project(req: NewProjectRequest):
         print(f"Erreur NEMO : {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+import time
+
 @app.post("/api/modify")
 async def modify_project(req: ModifyProjectRequest):
     try:
@@ -235,11 +239,25 @@ Mets à jour l'application en conservant sa cohérence et en appliquant exacteme
             else:
                 raise parse_err
 
-        files = project_data.get("files", {})
-        
-        # Mettre à jour les fichiers sauvegardés sur disque
+        # --- CORRECTION 1 : Extraire correctement les fichiers ---
+        # Si le JSON est sous la forme {"files": {"index.html": ...}} on prend "files".
+        # Sinon, si le JSON contient directement {"index.html": ...}, on prend project_data directement.
+        if "files" in project_data and isinstance(project_data["files"], dict):
+            files = project_data["files"]
+        else:
+            files = project_data
+
+        # --- CORRECTION 2 : Vérification qu'on a bien des fichiers ---
+        if not files or not isinstance(files, dict):
+            raise ValueError("Aucun fichier valide n'a été extrait du modèle AI.")
+
+        # Sauvegarder/Écraser les fichiers sur le disque de Render
         project_id = save_project_to_disk(req.project_id, files)
-        project_url = f"{BACKEND_URL}/projects/{project_id}/index.html"
+        
+        # --- CORRECTION 3 : URL anti-cache avec Timestamp ---
+        # L'ajout de ?t=timestamp évite que le navigateur n'affiche l'ancienne version en cache
+        timestamp = int(time.time())
+        project_url = f"{BACKEND_URL}/projects/{project_id}/index.html?t={timestamp}"
         
         return {
             "status": "success",
@@ -247,6 +265,7 @@ Mets à jour l'application en conservant sa cohérence et en appliquant exacteme
             "project_url": project_url,
             "files": files
         }
+
     except Exception as e:
         print(f"Erreur Modification NEMO : {e}")
         raise HTTPException(status_code=500, detail=str(e))
