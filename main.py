@@ -23,7 +23,11 @@ def clean_json_response(text: str) -> str:
     
     return text
 app = FastAPI(title="NEMO Engine - Full Featured")
+PROJECTS_DIR = "generated_projects"
+os.makedirs(PROJECTS_DIR, exist_ok=True)
 
+# Monter le dossier static pour la visualisation directe des projets
+app.mount("/view", StaticFiles(directory=PROJECTS_DIR, html=True), name="view")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://leafy-stardust-02122c.netlify.app"],
@@ -86,7 +90,7 @@ CONSIGNE D'ARCHITECTURE MULTI-FICHIERS (CRITIQUE) :
 - Assure-toi que tous les liens du menu (href) et les scripts (src) pointent vers des fichiers réels existants dans ton objet JSON.
 - Assure toi qu'il y a une possibilité, une faciliter de naviguer entre différents pages du projet (si il y en a). Pas question d se trouver piegé sur une page x.
 - Si le projet inclus la bd supabase, assure toi que le projet gérè trop bien les différent rêquetes (pour afficher par example les informations de la bd si besoin, ... que tout sur l db fonctionne 
-
+- Assure toi que tout ce que tu créer offre une meilleur experience utilisateur sur ordinateur comme sur mobile.
 FORMAT DE SORTIE STRICT (JSON) :
 Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide :
 
@@ -181,8 +185,15 @@ async def create_project(req: NewProjectRequest):
             project_data.get("project_name", "projet_nemo"), 
             project_data.get("files", {})
         )
-        
-        project_url = f"http://127.0.0.1:8000/projects/{project_id}/index.html"
+        project_path = os.path.join(PROJECTS_DIR, project_id)
+    os.makedirs(project_path, exist_ok=True)
+
+    for file_name, content in files.items():
+        file_full_path = os.path.join(project_path, file_name)
+        with open(file_full_path, "w", encoding="utf-8") as f:
+            f.write(content)
+            
+        project_url = BACKEND_URL +"/projects/{project_id}/index.html"
         
         return {
             "status": "success",
@@ -231,8 +242,14 @@ Mets à jour l'application en conservant sa cohérence et en appliquant exacteme
             else:
                 raise parse_err
         save_project_to_disk(req.project_id, project_data.get("files", {}))
-        
-        project_url = f"http://127.0.0.1:8000/projects/{req.project_id}/index.html"
+        project_path = os.path.join(PROJECTS_DIR, project_id)
+    os.makedirs(project_path, exist_ok=True)
+
+    for file_name, content in files.items():
+        file_full_path = os.path.join(project_path, file_name)
+        with open(file_full_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        project_url = BACKEND_URL +/projects/{req.project_id}/index.html"
         
         return {
             "status": "success",
