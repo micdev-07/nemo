@@ -587,39 +587,44 @@
     }
 
     async function modifyCurrentProject(prompt) {
-      setLoading(true, "NEMO applique les modifications en direct...");
+  setLoading(true, "NEMO applique les modifications en direct...");
 
-      try {
-        const response = await fetch(BACKEND_URL + '/api/modify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            project_id: activeProject.id,
-            prompt: prompt,
-            current_files: activeProject.files
-          })
-        });
+  try {
+    const response = await fetch(BACKEND_URL + '/api/modify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        project_id: activeProject.id,
+        prompt: prompt,
+        current_files: activeProject.files
+      })
+    });
 
-        if (!response.ok) throw new Error(`Erreur serveur: ${response.status}`);
-        const data = await response.json();
+    if (!response.ok) throw new Error(`Erreur serveur: ${response.status}`);
+    const data = await response.json();
 
-        if (data.status === 'success') {
-          activeProject.files = data.files;
-          activeProject.url = data.project_url;
+    if (data.status === 'success') {
+      activeProject.files = data.files;
+      // On ajoute un paramètre anti-cache (?t=...) pour s'assurer de voir le fichier frais de Render
+      const freshUrl = `${BACKEND_URL}/projects/${activeProject.id}/index.html?t=${Date.now()}`;
+      activeProject.url = freshUrl;
 
-          document.getElementById('promptInput').value = '';
-          
-          // Ouvre la version modifiée dans un autre onglet
-          window.open(data.project_url, '_blank');
-        }
-      } catch (err) {
-        console.error(err);
-        alert("Erreur lors de la modification.");
-      } finally {
-        setLoading(false, "Modifications appliquées !");
-      }
+      // Met à jour l'interface utilisateur
+      updateUIForActiveProject();
+      await loadSavedProjects();
+
+      document.getElementById('promptInput').value = '';
+      
+      // Ouvre directement la version modifiée servie par Render
+      window.open(freshUrl, '_blank');
     }
-
+  } catch (err) {
+    console.error(err);
+    alert("Erreur lors de la modification.");
+  } finally {
+    setLoading(false, "Modifications appliquées !");
+  }
+}
     function updateUIForActiveProject() {
       document.getElementById('mainTitle').innerText = "Que souhaitez-vous modifier ?";
       document.getElementById('promptInput').placeholder = "Modifiez le projet en direct (ex: Change la couleur principale en néon vert)...";
