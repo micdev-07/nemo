@@ -15,10 +15,15 @@ from google.genai import types
 # --- CONFIGURATION INITIALE ---
 app = FastAPI(title="NEMO Studio API", version="2.0.0")
 
-# Support du CORS
+# Support du CORS (Sans slash final pour éviter les Rejections CORS)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://nemostudio.netlify.app"],
+    allow_origins=[
+        "https://nemostudio.netlify.app",
+        "https://studio.netlify.app",
+        "http://localhost:3000",
+        "http://127.0.0.1:5500"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -29,7 +34,7 @@ PROJECTS_DIR = "projects"
 os.makedirs(PROJECTS_DIR, exist_ok=True)
 app.mount("/projects", StaticFiles(directory=PROJECTS_DIR), name="projects")
 
-# SDK Gemini
+# SDK Gemini et URL Backend
 client = genai.Client()
 BACKEND_URL = os.getenv("BACKEND_URL", "https://nemo-hdgw.onrender.com")
 
@@ -58,9 +63,40 @@ class ModifyProjectRequest(BaseModel):
     prompt: str
     current_files: Dict[str, str]
 
-# --- FONCTIONS UTILITAIRES ---
+# --- FONCTIONS UTILITAIRES & PARSEUR BLINDÉ ---
+
+def parse_llm_json(raw_text: str) -> dict:
+    """
+    Extrait et nettoie le JSON renvoyé par Gemini même s'il contient 
+    des caractères d'échappement problématiques ou du markdown.
+    """
+    # 1. Nettoyage des balises Markdown (```json ... ```)
+    cleaned = raw_text.strip()
+    cleaned = re.sub(r'^```(?:json)?\s*', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\s*```$', '', cleaned)
+    cleaned = cleaned.strip()
+
+    # 2. Tentative de parse direct
+    try:
+        return json.loads(cleaned, strict=False)
+    except json.JSONDecodeError:
+        pass
+
+    # 3. Récupération du bloc JSON { ... } principal par Regex
+    match = re.search(r'\{.*\}', cleaned, re.DOTALL)
+    if match:
+        json_str = match.group(0)
+        try:
+            return json.loads(json_str, strict=False)
+        except json.JSONDecodeError:
+            # 4. Secours : correction des sauts de ligne non échappés dans les chaînes
+            json_str_fixed = re.sub(r'(?<!\\)\n', r'\\n', json_str)
+            return json.loads(json_str_fixed, strict=False)
+
+    raise ValueError("Impossible de parser la structure JSON retournée par le modèle.")
+
 def save_project_to_disk(project_id: str, files: dict) -> str:
-    """Enregistre les fichiers du projet sur le disque du serveur Render."""
+    """Enregistre les fichiers du projet sur le disque dur du serveur Render."""
     clean_id = re.sub(r'[^\w\-]', '_', project_id).lower()
     output_dir = os.path.join(PROJECTS_DIR, clean_id)
     os.makedirs(output_dir, exist_ok=True)
@@ -75,26 +111,21 @@ def save_project_to_disk(project_id: str, files: dict) -> str:
             
     return clean_id
 
-def clean_json_response(raw_text: str) -> str:
-    cleaned = raw_text.strip()
-    if cleaned.startswith("```json"): cleaned = cleaned[7:]
-    elif cleaned.startswith("```"): cleaned = cleaned[3:]
-    if cleaned.endswith("```"): cleaned = cleaned[:-3]
-    return cleaned.strip()
-
 def remove_file(path: str):
+    """Nettoyage en arrière-plan des fichiers ZIP générés."""
     try:
-        if os.path.exists(path): os.remove(path)
+        if os.path.exists(path): 
+            os.remove(path)
     except Exception as e:
-        print(f"Erreur nettoyage ZIP : {e}")
+        print(f"Erreur lors du nettoyage du ZIP : {e}")
 
 # --- ROUTES API ---
 
 @app.get("/")
 async def root():
-    return {"status": "online", "system": "NEMO Studio Engine"}
+    return {"status": "online", "system": "NEMO Studio Engine v2.0"}
 
-# 1. CRÉATION
+# 1. CRÉATION DE PROJET
 @app.post("/api/create")
 async def create_project(req: CreateProjectRequest):
     try:
@@ -106,15 +137,18 @@ async def create_project(req: CreateProjectRequest):
             contents=prompt_create,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.4,
+                temperature=0.3,
                 max_output_tokens=8192
             )
         )
         
-        cleaned_text = clean_json_response(response.text)
-        project_data = json.loads(cleaned_text, strict=False)
+        # Extraction robuste du JSON
+        project_data = parse_llm_json(response.text)
         files = project_data.get("files", project_data) if isinstance(project_data, dict) else {}
         
+        if not files or not isinstance(files, dict):
+            raise ValueError("Le dictionnaire des fichiers est invalide ou vide.")
+
         clean_id = save_project_to_disk(project_id, files)
         project_url = f"{BACKEND_URL}/projects/{clean_id}/index.html?t={int(time.time())}"
         
@@ -125,29 +159,32 @@ async def create_project(req: CreateProjectRequest):
             "files": files
         }
     except Exception as e:
-        print(f"Erreur Création : {e}")
+        print(f"Erreur Création NEMO : {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# 2. MODIFICATION
+# 2. MODIFICATION DE PROJET
 @app.post("/api/modify")
 async def modify_project(req: ModifyProjectRequest):
     try:
-        prompt_modif = f"{SYSTEM_PROMPT_NEMO}\n\nPROJET ACTUEL :\n{json.dumps(req.current_files)}\n\nMODIFICATION :\n{req.prompt}"
+        prompt_modif = f"{SYSTEM_PROMPT_NEMO}\n\nPROJET ACTUEL :\n{json.dumps(req.current_files)}\n\nMODIFICATION DEMANDÉE :\n{req.prompt}"
         
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=prompt_modif,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.4,
+                temperature=0.3,
                 max_output_tokens=8192
             )
         )
         
-        cleaned_text = clean_json_response(response.text)
-        project_data = json.loads(cleaned_text, strict=False)
+        # Extraction robuste du JSON
+        project_data = parse_llm_json(response.text)
         files = project_data.get("files", project_data) if isinstance(project_data, dict) else {}
         
+        if not files or not isinstance(files, dict):
+            raise ValueError("Le dictionnaire des fichiers est invalide ou vide.")
+
         clean_id = save_project_to_disk(req.project_id, files)
         project_url = f"{BACKEND_URL}/projects/{clean_id}/index.html?t={int(time.time())}"
         
@@ -158,7 +195,7 @@ async def modify_project(req: ModifyProjectRequest):
             "files": files
         }
     except Exception as e:
-        print(f"Erreur Modification : {e}")
+        print(f"Erreur Modification NEMO : {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # 3. TÉLÉCHARGEMENT ZIP
@@ -168,11 +205,13 @@ async def download_project_zip(project_id: str, background_tasks: BackgroundTask
     project_dir = os.path.join(PROJECTS_DIR, clean_id)
     
     if not os.path.exists(project_dir):
-        raise HTTPException(status_code=404, detail="Projet introuvable")
+        raise HTTPException(status_code=404, detail="Projet introuvable sur le serveur.")
     
     zip_path = os.path.join(PROJECTS_DIR, f"{clean_id}.zip")
     shutil.make_archive(os.path.join(PROJECTS_DIR, clean_id), 'zip', project_dir)
+    
+    # Programme la suppression du fichier ZIP temporaire après l'envoi
     background_tasks.add_task(remove_file, zip_path)
     
     return FileResponse(path=zip_path, filename=f"{clean_id}.zip", media_type='application/zip')
-    
+        
