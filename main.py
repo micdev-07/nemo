@@ -13,9 +13,9 @@ from google import genai
 from google.genai import types
 
 # --- CONFIGURATION INITIALE ---
-app = FastAPI(title="NEMO Studio API", version="2.0.0")
+app = FastAPI(title="NEMO Studio API", version="2.1.0")
 
-# Support du CORS (Sans slash final pour éviter les Rejections CORS)
+# Support du CORS (Configuration stricte sans slash final)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -54,6 +54,18 @@ REGLES ET EXPERTISE TECHNIQUE :
    Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide contenant la clé "files" avec tous les fichiers du projet (ex: index.html, style.css, script.js).
 """
 
+# SCHÉMA DE RÉPONSE STRUCTURÉ STRICT POUR GEMINI
+JSON_SCHEMA_NEMO = {
+    "type": "OBJECT",
+    "properties": {
+        "files": {
+            "type": "OBJECT",
+            "additionalProperties": {"type": "STRING"}
+        }
+    },
+    "required": ["files"]
+}
+
 # --- MODÈLES DE REQUÊTE ---
 class CreateProjectRequest(BaseModel):
     prompt: str
@@ -63,15 +75,16 @@ class ModifyProjectRequest(BaseModel):
     prompt: str
     current_files: Dict[str, str]
 
-# --- FONCTIONS UTILITAIRES & PARSEUR BLINDÉ ---
+# --- PARSEUR JSON ULTRA-ROBUSTE ---
 
 def parse_llm_json(raw_text: str) -> dict:
     """
-    Extrait et nettoie le JSON renvoyé par Gemini même s'il contient 
-    des caractères d'échappement problématiques ou du markdown.
+    Extrait et répare le JSON renvoyé par Gemini même s'il contient 
+    des caractères d'échappement problématiques ou des balises Markdown.
     """
-    # 1. Nettoyage des balises Markdown (```json ... ```)
     cleaned = raw_text.strip()
+    
+    # 1. Suppression du balisage Markdown (```json ... ```)
     cleaned = re.sub(r'^```(?:json)?\s*', '', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'\s*```$', '', cleaned)
     cleaned = cleaned.strip()
@@ -82,18 +95,21 @@ def parse_llm_json(raw_text: str) -> dict:
     except json.JSONDecodeError:
         pass
 
-    # 3. Récupération du bloc JSON { ... } principal par Regex
+    # 3. Extraction du bloc JSON { ... } principal avec Regex
     match = re.search(r'\{.*\}', cleaned, re.DOTALL)
     if match:
         json_str = match.group(0)
         try:
             return json.loads(json_str, strict=False)
         except json.JSONDecodeError:
-            # 4. Secours : correction des sauts de ligne non échappés dans les chaînes
-            json_str_fixed = re.sub(r'(?<!\\)\n', r'\\n', json_str)
-            return json.loads(json_str_fixed, strict=False)
+            # 4. Secours : correction des retours à la ligne non échappés dans les chaînes HTML/CSS
+            try:
+                json_str_fixed = re.sub(r'(?<!\\)\n', r'\\n', json_str)
+                return json.loads(json_str_fixed, strict=False)
+            except json.JSONDecodeError:
+                pass
 
-    raise ValueError("Impossible de parser la structure JSON retournée par le modèle.")
+    raise ValueError("Impossible de parser la structure JSON retournée par l'IA.")
 
 def save_project_to_disk(project_id: str, files: dict) -> str:
     """Enregistre les fichiers du projet sur le disque dur du serveur Render."""
@@ -123,7 +139,7 @@ def remove_file(path: str):
 
 @app.get("/")
 async def root():
-    return {"status": "online", "system": "NEMO Studio Engine v2.0"}
+    return {"status": "online", "system": "NEMO Studio Engine v2.1"}
 
 # 1. CRÉATION DE PROJET
 @app.post("/api/create")
@@ -137,14 +153,15 @@ async def create_project(req: CreateProjectRequest):
             contents=prompt_create,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
+                response_schema=JSON_SCHEMA_NEMO,
                 temperature=0.3,
                 max_output_tokens=8192
             )
         )
         
-        # Extraction robuste du JSON
+        # Extraction du JSON
         project_data = parse_llm_json(response.text)
-        files = project_data.get("files", project_data) if isinstance(project_data, dict) else {}
+        files = project_data.get("files", {})
         
         if not files or not isinstance(files, dict):
             raise ValueError("Le dictionnaire des fichiers est invalide ou vide.")
@@ -173,14 +190,15 @@ async def modify_project(req: ModifyProjectRequest):
             contents=prompt_modif,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                temperature=0.3,
+                response_schema=JSON_SCHEMA_NEMO,
+                temperature=0.4,
                 max_output_tokens=8192
             )
         )
         
-        # Extraction robuste du JSON
+        # Extraction du JSON
         project_data = parse_llm_json(response.text)
-        files = project_data.get("files", project_data) if isinstance(project_data, dict) else {}
+        files = project_data.get("files", {})
         
         if not files or not isinstance(files, dict):
             raise ValueError("Le dictionnaire des fichiers est invalide ou vide.")
@@ -210,7 +228,6 @@ async def download_project_zip(project_id: str, background_tasks: BackgroundTask
     zip_path = os.path.join(PROJECTS_DIR, f"{clean_id}.zip")
     shutil.make_archive(os.path.join(PROJECTS_DIR, clean_id), 'zip', project_dir)
     
-    # Programme la suppression du fichier ZIP temporaire après l'envoi
     background_tasks.add_task(remove_file, zip_path)
     
     return FileResponse(path=zip_path, filename=f"{clean_id}.zip", media_type='application/zip')
