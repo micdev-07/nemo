@@ -164,7 +164,7 @@ async def create_project(req: CreateProjectRequest):
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=JSON_SCHEMA_NEMO,
-                temperature=0.3,
+                temperature=0.4,
                 max_output_tokens=8192
             )
         )
@@ -185,10 +185,16 @@ async def create_project(req: CreateProjectRequest):
             "project_url": project_url,
             "files": files
         }
-    except Exception as e:
-        print(f"Erreur Création NEMO : {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
+        except Exception as e:
+            err_msg = str(e)
+            if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                raise HTTPException(
+                status_code=429, 
+                detail="NEMO est surchargé ! Trop de demandes en peu de temps, réessaye dans 10 secondes."
+            )
+            print(f"Erreur NEMO : {e}")
+            raise HTTPException(status_code=500, detail=f"Erreur interne : {err_msg}")
+    
 # 2. MODIFICATION DE PROJET
 @app.post("/api/modify")
 async def modify_project(req: ModifyProjectRequest):
@@ -201,7 +207,7 @@ async def modify_project(req: ModifyProjectRequest):
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=JSON_SCHEMA_NEMO,
-                temperature=0.4,
+                temperature=0.2,
                 max_output_tokens=8192
             )
         )
@@ -223,9 +229,15 @@ async def modify_project(req: ModifyProjectRequest):
             "files": files
         }
     except Exception as e:
-        print(f"Erreur Modification NEMO : {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
+            err_msg = str(e)
+            if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                raise HTTPException(
+                status_code=429, 
+                detail="NEMO est surchargé ! Trop de demandes en peu de temps, réessaye dans 10 secondes."
+            )
+            print(f"Erreur NEMO : {e}")
+            raise HTTPException(status_code=500, detail=f"Erreur interne : {err_msg}")
+    
 # 3. TÉLÉCHARGEMENT ZIP
 @app.get("/api/download/{project_id}")
 async def download_project_zip(project_id: str, background_tasks: BackgroundTasks):
