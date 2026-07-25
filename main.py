@@ -55,16 +55,22 @@ REGLES ET EXPERTISE TECHNIQUE :
 """
 
 # SCHÉMA DE RÉPONSE STRUCTURÉ STRICT POUR GEMINI
+# SCHÉMA DE RÉPONSE COMPATIBLE GEMINI DEVELOPER API
 JSON_SCHEMA_NEMO = {
     "type": "OBJECT",
     "properties": {
         "files": {
             "type": "OBJECT",
-            "additionalProperties": {"type": "STRING"}
+            "properties": {
+                "index.html": {"type": "STRING"},
+                "style.css": {"type": "STRING"},
+                "script.js": {"type": "STRING"}
+            }
         }
     },
     "required": ["files"]
 }
+
 
 # --- MODÈLES DE REQUÊTE ---
 class CreateProjectRequest(BaseModel):
