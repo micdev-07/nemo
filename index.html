@@ -39,27 +39,28 @@
       display: flex;
       flex-direction: column;
       height: 100vh;
-      z-index: 100;
+      z-index: 1000;
       transition: transform 0.3s ease;
     }
-    .sidebar-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.5);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-  z-index: 998;
-}
 
-/* Quand active, l'overlay devient visible et cliquable */
-.sidebar-overlay.active {
-  opacity: 1;
-  pointer-events: auto;
-}
+    .sidebar-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 998;
+    }
+
+    .sidebar-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
     .sidebar-header {
       padding: 1.5rem;
       border-bottom: 1px solid var(--border-color);
@@ -75,7 +76,7 @@
     }
 
     .logo-text {
-      font-size: 1.5rem;
+      font-size: 1.3rem;
       font-weight: 900;
       letter-spacing: 0.15em;
       color: var(--color-aqua);
@@ -89,6 +90,15 @@
       padding: 0.2rem 0.5rem;
       border-radius: 20px;
       font-weight: 600;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: var(--color-aqua);
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: none;
     }
 
     .btn-new-project {
@@ -122,13 +132,8 @@
       gap: 0.8rem;
     }
 
-    .projects-container::-webkit-scrollbar {
-      width: 5px;
-    }
-    .projects-container::-webkit-scrollbar-thumb {
-      background: var(--border-color);
-      border-radius: 4px;
-    }
+    .projects-container::-webkit-scrollbar { width: 5px; }
+    .projects-container::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
 
     .project-card {
       background: var(--bg-card);
@@ -138,17 +143,11 @@
       display: flex;
       flex-direction: column;
       gap: 0.6rem;
-      transition: border-color 0.2s, transform 0.2s;
+      transition: border-color 0.2s;
     }
 
-    .project-card:hover {
-      border-color: rgba(0, 240, 255, 0.4);
-    }
-
-    .project-card.active {
-      border-color: var(--color-aqua);
-      background: rgba(0, 240, 255, 0.03);
-    }
+    .project-card:hover { border-color: rgba(0, 240, 255, 0.4); }
+    .project-card.active { border-color: var(--color-aqua); background: rgba(0, 240, 255, 0.03); }
 
     .project-title {
       font-weight: bold;
@@ -159,10 +158,7 @@
       text-overflow: ellipsis;
     }
 
-    .project-card-actions {
-      display: flex;
-      gap: 0.5rem;
-    }
+    .project-card-actions { display: flex; gap: 0.5rem; }
 
     .btn-card {
       flex: 1;
@@ -173,6 +169,8 @@
       font-size: 0.75rem;
       cursor: pointer;
       font-weight: bold;
+      text-decoration: none;
+      text-align: center;
       transition: all 0.2s;
     }
 
@@ -218,18 +216,16 @@
       cursor: pointer;
     }
 
-    .status-badge {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-    }
+    .status-badge { font-size: 0.85rem; color: var(--text-muted); }
 
     .workspace-content {
       flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
       padding: 1.5rem;
-      gap: 1.2rem;
+      gap: 1.5rem;
       overflow-y: auto;
     }
 
@@ -241,16 +237,15 @@
       -webkit-text-fill-color: transparent;
       text-align: center;
     }
+
     .big_T {
-      font-size: 2.1rem;
-      font-weight: 8000;
-      background: linear-gradient(135deg, #ffffff 0%, #8a90a0 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-muted);
       text-align: center;
+      margin-top: -0.8rem;
     }
 
-    /* Barre d'action projet actif */
     .active-project-bar {
       display: none;
       width: 100%;
@@ -265,10 +260,7 @@
 
     .active-project-bar.visible { display: flex; }
 
-    .action-group {
-      display: flex;
-      gap: 0.5rem;
-    }
+    .action-group { display: flex; gap: 0.5rem; }
 
     .btn-action {
       background: transparent;
@@ -283,12 +275,8 @@
       transition: background 0.2s, color 0.2s;
     }
 
-    .btn-action:hover {
-      background: var(--color-aqua);
-      color: var(--bg-dark);
-    }
+    .btn-action:hover { background: var(--color-aqua); color: var(--bg-dark); }
 
-    /* Zone Prompt */
     .prompt-wrapper {
       position: relative;
       width: 100%;
@@ -305,12 +293,12 @@
 
     .prompt-input {
       width: 100%;
-      height: 90px;
+      height: 100px;
       background: transparent;
       border: none;
       outline: none;
       color: var(--text-main);
-      font-size: 0.95rem;
+      font-size: 1rem;
       resize: none;
       font-family: inherit;
     }
@@ -336,46 +324,6 @@
     .send-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
     .send-btn svg { width: 20px; height: 20px; fill: currentColor; }
 
-    /* Zone de prévisualisation Frame */
-    .preview-container {
-      width: 100%;
-      max-width: 900px;
-      flex: 1;
-      min-height: 350px;
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .preview-header {
-      padding: 0.6rem 1rem;
-      background: #121522;
-      border-bottom: 1px solid var(--border-color);
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .preview-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background-color: var(--color-aqua);
-    }
-
-    .preview-iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-      background: #ffffff;
-    }
-
-    /* Modal Auth */
     #authModal {
       position: fixed;
       top: 0; left: 0; width: 100vw; height: 100vh;
@@ -398,23 +346,18 @@
       box-shadow: 0 10px 40px rgba(0, 240, 255, 0.1);
     }
 
-    /* Responsive Design */
     @media (max-width: 768px) {
       .sidebar {
         position: fixed;
         top: 0;
-        left: -280px;
-        width: 280px;
+        left: -320px;
+        width: 320px;
         height: 100vh;
         transition: transform 0.3s ease;
-        z-index: 999;
       }
-      .sidebar.open {
-        transform: translateX(280px);
-      }
-      .mobile-menu-toggle {
-        display: block;
-      }
+      .sidebar.open { transform: translateX(320px); }
+      .mobile-menu-toggle { display: block; }
+      .close-btn { display: block; }
     }
   </style>
 </head>
@@ -440,23 +383,23 @@
     </div>
   </div>
 
+  <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
+
   <!-- BARRE LATÉRALE : PROJETS -->
   <aside id="sidebar" class="sidebar">
     <div class="sidebar-header">
-      
       <div class="brand-box">
         <span class="logo-text">NEMO STUDIO</span>
-        <span class="badge-labs">Micoffice Labs</span> <button class="close-btn" onclick="closeSidebar()" style= "font-size: 0.5rem color: aqua border-raduis: 20%">✕</button>
+        <span class="badge-labs">Micoffice Labs</span>
       </div>
+      <button class="close-btn" onclick="closeSidebar()">✕</button>
     </div>
 
     <button class="btn-new-project" onclick="resetProject()">
       <span>+</span> Nouveau Projet
     </button>
 
-    <div id="projectsList" class="projects-container">
-      <!-- Chargement dynamique des projets -->
-    </div>
+    <div id="projectsList" class="projects-container"></div>
 
     <div class="sidebar-footer">
       Propulsé par <strong>Micoffice Labs</strong> • version NEMO: stong_v7
@@ -471,13 +414,14 @@
     </header>
 
     <div class="workspace-content">
-      <h1 id="mainTitle" class="main-title">Je suis NEMO, decrivez-moi votre idée.</h1>
-      <h1 class="big_T">Créez par vos pensées.</h1>
+      <h1 id="mainTitle" class="main-title">Je suis NEMO, décrivez-moi votre idée.</h1>
+      <p class="big_T">Créez par vos pensées.</p>
+
       <!-- BARRE DU PROJET ACTIF -->
       <div id="activeProjectBar" class="active-project-bar">
         <span id="currentProjectName" style="font-weight: bold; color: var(--color-aqua);">Projet Actif</span>
         <div class="action-group">
-          <a id="btnPreview" href="#" class="btn-action" onclick= "previewInNewTab()">Visualiser ↗</a>
+          <a id="btnPreview" href="#" target="_blank" class="btn-action">Visualiser ↗</a>
           <a id="btnDownload" href="#" class="btn-action">📦 Télécharger ZIP</a>
         </div>
       </div>
@@ -485,7 +429,7 @@
       <!-- FORMULAIRE PROMPT -->
       <div class="prompt-wrapper">
         <textarea id="promptInput" class="prompt-input" 
-          placeholder="Décrivez votre projet (ex: Une plateforme qui simule un un salon virtuel futuriste)..."
+          placeholder="Décrivez votre projet (ex: Une plateforme qui simule un salon virtuel futuriste)..."
           onkeydown="handleKeyDown(event)"></textarea>
         
         <button id="sendBtn" class="send-btn" onclick="handleSubmit()" title="Lancer NEMO">
@@ -494,17 +438,6 @@
           </svg>
         </button>
       </div>
-
-      <!-- ZONE DE TÉLÉCHARGEMENT & CONFIRMATION -->
-<div id="downloadContainer" class="download-card" style="display: none;">
-  <div class="download-icon">📦</div>
-  <h3>Projet généré avec succès !</h3>
-  <p>Pour visualiser votre création, téléchargez le projet et ouvrez le fichier <code>index.html</code> dans votre navigateur.</p>
-  
-  <a id="autoDownloadBtn" href="#" class="btn-download-main">
-    ⬇️ Télécharger le projet (.ZIP)
-  </a>
-</div>
     </div>
   </main>
 
@@ -512,7 +445,7 @@
     let activeProject = null; 
     const TEAM_PASSWORD = "1000Micoffice";
     const BACKEND_URL = "https://nemo-hdgw.onrender.com";
-    // Vérification de session au chargement
+
     (function checkAuth() {
       if (sessionStorage.getItem('nemo_authenticated') === 'true') {
         window.addEventListener('load', () => {
@@ -537,32 +470,24 @@
       }
     }
 
-    // Gestion du menu mobile
     function toggleSidebar() {
-  const sidebar = document.querySelector('.sidebar');
-  const overlay = document.querySelector('.sidebar-overlay');
-  
-  if (sidebar && overlay) {
-    sidebar.classList.toggle('open');
-    overlay.classList.toggle('active');
-  }
-}
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (sidebar && overlay) {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+      }
+    }
 
-function closeSidebar() {
-  const sidebar = document.querySelector('.sidebar');
-  const overlay = document.querySelector('.sidebar-overlay');
-  
-  if (sidebar && overlay) {
-    sidebar.classList.remove('open');
-    overlay.classList.remove('active');
-  }
-}
-    function openSidebar() {
-    document.getElementById("mySidebar").classList.add("open");
-    document.getElementById("sidebarOverlay").classList.add("active");
-  }
+    function closeSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (sidebar && overlay) {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+      }
+    }
 
-    // Charger les projets enregistrés au démarrage
     window.addEventListener('load', () => {
       loadSavedProjects();
     });
@@ -584,13 +509,12 @@ function closeSidebar() {
           const isActive = activeProject && activeProject.id === proj.id;
           card.className = `project-card ${isActive ? 'active' : ''}`;
 
-          // Nettoyage des fichiers pour l'injection inline JS
           const safeFiles = JSON.stringify(proj.files).replace(/"/g, '&quot;');
 
           card.innerHTML = `
             <span class="project-title">${proj.name}</span>
             <div class="project-card-actions">
-              <button class="btn-card btn-card-preview" onclick= "previewInNewTab()" >Visualiser ↗</button>
+              <a class="btn-card btn-card-preview" href="${proj.url}" target="_blank">Visualiser ↗</a>
               <button class="btn-card btn-card-modify" onclick="selectProjectForModify('${proj.id}', '${proj.name}', ${safeFiles}, '${proj.url}')">✏️ Modifier</button>
             </div>
           `;
@@ -599,24 +523,12 @@ function closeSidebar() {
       } catch (err) {
         console.error("Erreur chargement projets :", err);
       }
-      
     }
 
-    // Visualiser le projet dans la fenêtre Iframe
-    function previewProject(url) {
-      const iframe = document.getElementById('projectPreviewIframe');
-      if (iframe) {
-        iframe.src = url;
-      }
-    }
-
-    // Sélectionner un projet à modifier
     function selectProjectForModify(id, name, files, url) {
       activeProject = { id, name, files, url };
-      
-      previewProject(url);
       updateUIForActiveProject();
-      loadSavedProjects(); // Rafraîchit l'état visuel actif dans la barre latérale
+      loadSavedProjects();
       closeSidebar();
     }
 
@@ -660,9 +572,11 @@ function closeSidebar() {
           };
 
           updateUIForActiveProject();
-          previewProject(data.project_url);
           await loadSavedProjects();
           document.getElementById('promptInput').value = '';
+          
+          // Ouvre directement le nouveau projet dans un autre onglet
+          window.open(data.project_url, '_blank');
         }
       } catch (err) {
         console.error(err);
@@ -685,17 +599,18 @@ function closeSidebar() {
             current_files: activeProject.files
           })
         });
-        if (!response.ok) {
-          throw new Error(`Erreur serveur: ${response.status}`);
-        }
+
+        if (!response.ok) throw new Error(`Erreur serveur: ${response.status}`);
         const data = await response.json();
 
         if (data.status === 'success') {
           activeProject.files = data.files;
           activeProject.url = data.project_url;
 
-          previewProject(data.project_url);
           document.getElementById('promptInput').value = '';
+          
+          // Ouvre la version modifiée dans un autre onglet
+          window.open(data.project_url, '_blank');
         }
       } catch (err) {
         console.error(err);
@@ -704,57 +619,6 @@ function closeSidebar() {
         setLoading(false, "Modifications appliquées !");
       }
     }
-    function previewInNewTab() {
-  if (!activeProject || !activeProject.files) {
-    alert("Aucun projet à visualiser !");
-    return;
-  }
-
-  // 1. On prépare la fenêtre immédiatement
-  const newTab = window.open('', '_blank');
-
-  if (!newTab) {
-    alert("Veuillez autoriser les fenêtres surgissantes (pop-ups) pour voir l'aperçu.");
-    return;
-  }
-
-  // 2. On prépare le contenu HTML/CSS/JS (Code universel)
-  const files = activeProject.files;
-  const fileNames = Object.keys(files);
-
-  let mainHtmlKey = fileNames.find(name => name.toLowerCase() === 'index.html') 
-                 || fileNames.find(name => name.toLowerCase().endsWith('.html'));
-
-  if (!mainHtmlKey) {
-    newTab.close();
-    alert("Aucun fichier HTML trouvé dans ce projet.");
-    return;
-  }
-
-  let htmlContent = files[mainHtmlKey];
-
-  let combinedCss = "";
-  fileNames.forEach(name => {
-    if (name.toLowerCase().endsWith('.css')) combinedCss += `\n${files[name]}`;
-  });
-
-  let combinedJs = "";
-  fileNames.forEach(name => {
-    if (name.toLowerCase().endsWith('.js')) combinedJs += `\n${files[name]}`;
-  });
-
-  if (combinedCss.trim()) {
-    htmlContent = htmlContent.replace('</head>', `<style>${combinedCss}</style></head>`);
-  }
-  if (combinedJs.trim()) {
-    htmlContent = htmlContent.replace('</body>', `<script>${combinedJs}<\/script></body>`);
-  }
-
-  // 3. On injecte le contenu directement dans le nouvel onglet ouvert !
-  newTab.document.open();
-  newTab.document.write(htmlContent);
-  newTab.document.close();
-}
 
     function updateUIForActiveProject() {
       document.getElementById('mainTitle').innerText = "Que souhaitez-vous modifier ?";
@@ -771,7 +635,6 @@ function closeSidebar() {
       document.getElementById('promptInput').placeholder = "Décrivez votre projet (ex: Un dashboard SaaS de gestion des ventes), un petit jeu, un site web...";
       document.getElementById('activeProjectBar').classList.remove('visible');
       document.getElementById('statusText').innerText = "Prêt pour une nouvelle création";
-      document.getElementById('projectPreviewIframe').src = 'about:blank';
       loadSavedProjects();
     }
 
@@ -781,6 +644,5 @@ function closeSidebar() {
       document.getElementById('statusText').innerText = message;
     }
   </script>
-<div id="sidebarOverlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
 </body>
 </html>
