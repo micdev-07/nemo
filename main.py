@@ -185,7 +185,7 @@ async def create_project(req: CreateProjectRequest):
             "project_url": project_url,
             "files": files
         }
-        except Exception as e:
+    except Exception as e:
             err_msg = str(e)
             if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
                 raise HTTPException(
