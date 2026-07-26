@@ -170,10 +170,10 @@ async def create_project(req: CreateProjectRequest):
         raw_text = response.text
 
         print("=" * 40)
-        print("=== RÉPONSE BRUTE DE GEMINI (CREATE) ===")
+        print("=== RÉPONSE BRUTE DE GEMINI ===")
         print(raw_text)
         print("=" * 40)
-        
+
         project_data = parse_llm_json(raw_text)
         files = project_data.get("files", {})
         
