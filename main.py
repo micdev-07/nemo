@@ -3,6 +3,7 @@ import re
 import json
 import time
 import shutil
+import requests  # <-- Ajouté pour faire les requêtes vers l'API Netlify
 from typing import Dict
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
@@ -13,7 +14,7 @@ from google import genai
 from google.genai import types
 
 # --- CONFIGURATION INITIALE ---
-app = FastAPI(title="NEMO Studio API", version="2.1.0")
+app = FastAPI(title="NEMO Studio API", version="2.2.0")
 
 # Support du CORS (Configuration stricte sans slash final)
 app.add_middleware(
@@ -34,11 +35,11 @@ PROJECTS_DIR = "projects"
 os.makedirs(PROJECTS_DIR, exist_ok=True)
 app.mount("/projects", StaticFiles(directory=PROJECTS_DIR), name="projects")
 
-# SDK Gemini et URL Backend
+# SDK Gemini et Variables d'environnement
 client = genai.Client()
 BACKEND_URL = os.getenv("BACKEND_URL", "https://nemo-hdgw.onrender.com")
+NETLIFY_AUTH_TOKEN = os.getenv("NETLIFY_AUTH_TOKEN", "")
 
-# --- PROMPT SYSTEME (SPECIALISTE FRONT-END) ---
 # --- PROMPT SYSTEME (SPECIALISTE FRONT-END) ---
 SYSTEM_PROMPT_NEMO = """
 Tu es NEMO, un développeur Front-end d'élite et UI/UX Designer d'exception.
@@ -57,8 +58,6 @@ REGLES ET EXPERTISE TECHNIQUE :
    Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide contenant la clé "files" avec tous les fichiers du projet (ex: index.html, style.css, script.js).
 """
 
-
-# SCHÉMA DE RÉPONSE STRUCTURÉ STRICT POUR GEMINI
 # SCHÉMA DE RÉPONSE COMPATIBLE GEMINI DEVELOPER API
 JSON_SCHEMA_NEMO = {
     "type": "OBJECT",
@@ -75,7 +74,6 @@ JSON_SCHEMA_NEMO = {
     "required": ["files"]
 }
 
-
 # --- MODÈLES DE REQUÊTE ---
 class CreateProjectRequest(BaseModel):
     prompt: str
@@ -85,34 +83,29 @@ class ModifyProjectRequest(BaseModel):
     prompt: str
     current_files: Dict[str, str]
 
+class DeployProjectRequest(BaseModel):
+    project_id: str
+
 # --- PARSEUR JSON ULTRA-ROBUSTE ---
 
 def parse_llm_json(raw_text: str) -> dict:
-    """
-    Extrait et répare le JSON renvoyé par Gemini même s'il contient 
-    des caractères d'échappement problématiques ou des balises Markdown.
-    """
+    """Extrait et répare le JSON renvoyé par Gemini."""
     cleaned = raw_text.strip()
-    
-    # 1. Suppression du balisage Markdown (```json ... ```)
     cleaned = re.sub(r'^```(?:json)?\s*', '', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'\s*```$', '', cleaned)
     cleaned = cleaned.strip()
 
-    # 2. Tentative de parse direct
     try:
         return json.loads(cleaned, strict=False)
     except json.JSONDecodeError:
         pass
 
-    # 3. Extraction du bloc JSON { ... } principal avec Regex
     match = re.search(r'\{.*\}', cleaned, re.DOTALL)
     if match:
         json_str = match.group(0)
         try:
             return json.loads(json_str, strict=False)
         except json.JSONDecodeError:
-            # 4. Secours : correction des retours à la ligne non échappés dans les chaînes HTML/CSS
             try:
                 json_str_fixed = re.sub(r'(?<!\\)\n', r'\\n', json_str)
                 return json.loads(json_str_fixed, strict=False)
@@ -138,18 +131,18 @@ def save_project_to_disk(project_id: str, files: dict) -> str:
     return clean_id
 
 def remove_file(path: str):
-    """Nettoyage en arrière-plan des fichiers ZIP générés."""
+    """Nettoyage en arrière-plan des fichiers temporaires."""
     try:
         if os.path.exists(path): 
             os.remove(path)
     except Exception as e:
-        print(f"Erreur lors du nettoyage du ZIP : {e}")
+        print(f"Erreur lors du nettoyage : {e}")
 
 # --- ROUTES API ---
 
 @app.get("/")
 async def root():
-    return {"status": "online", "system": "NEMO Studio Engine v2.1"}
+    return {"status": "online", "system": "NEMO Studio Engine v2.2"}
 
 # 1. CRÉATION DE PROJET
 @app.post("/api/create")
@@ -169,7 +162,6 @@ async def create_project(req: CreateProjectRequest):
             )
         )
         
-        # Extraction du JSON
         project_data = parse_llm_json(response.text)
         files = project_data.get("files", {})
         
@@ -186,15 +178,15 @@ async def create_project(req: CreateProjectRequest):
             "files": files
         }
     except Exception as e:
-            err_msg = str(e)
-            if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
-                raise HTTPException(
+        err_msg = str(e)
+        if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+            raise HTTPException(
                 status_code=429, 
                 detail="NEMO est surchargé ! Trop de demandes en peu de temps, réessaye dans 10 secondes."
             )
-            print(f"Erreur NEMO : {e}")
-            raise HTTPException(status_code=500, detail=f"Erreur interne : {err_msg}")
-    
+        print(f"Erreur NEMO : {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur interne : {err_msg}")
+
 # 2. MODIFICATION DE PROJET
 @app.post("/api/modify")
 async def modify_project(req: ModifyProjectRequest):
@@ -212,7 +204,6 @@ async def modify_project(req: ModifyProjectRequest):
             )
         )
         
-        # Extraction du JSON
         project_data = parse_llm_json(response.text)
         files = project_data.get("files", {})
         
@@ -229,15 +220,15 @@ async def modify_project(req: ModifyProjectRequest):
             "files": files
         }
     except Exception as e:
-            err_msg = str(e)
-            if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
-                raise HTTPException(
+        err_msg = str(e)
+        if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+            raise HTTPException(
                 status_code=429, 
                 detail="NEMO est surchargé ! Trop de demandes en peu de temps, réessaye dans 10 secondes."
             )
-            print(f"Erreur NEMO : {e}")
-            raise HTTPException(status_code=500, detail=f"Erreur interne : {err_msg}")
-    
+        print(f"Erreur NEMO : {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur interne : {err_msg}")
+
 # 3. TÉLÉCHARGEMENT ZIP
 @app.get("/api/download/{project_id}")
 async def download_project_zip(project_id: str, background_tasks: BackgroundTasks):
@@ -253,4 +244,52 @@ async def download_project_zip(project_id: str, background_tasks: BackgroundTask
     background_tasks.add_task(remove_file, zip_path)
     
     return FileResponse(path=zip_path, filename=f"{clean_id}.zip", media_type='application/zip')
+
+# 4. DÉPLOIEMENT PERMANENT SUR NETLIFY
+@app.post("/api/deploy")
+async def deploy_to_netlify(req: DeployProjectRequest, background_tasks: BackgroundTasks):
+    if not NETLIFY_AUTH_TOKEN:
+        raise HTTPException(status_code=500, detail="Token d'authentification Netlify non configuré.")
+    
+    clean_id = re.sub(r'[^\w\-]', '_', req.project_id).lower()
+    project_dir = os.path.join(PROJECTS_DIR, clean_id)
+    
+    if not os.path.exists(project_dir):
+        raise HTTPException(status_code=404, detail="Projet introuvable pour le déploiement.")
+
+    # Création temporaire du ZIP pour l'API Netlify
+    zip_base_path = os.path.join(PROJECTS_DIR, f"deploy_{clean_id}")
+    zip_path = f"{zip_base_path}.zip"
+    shutil.make_archive(zip_base_path, 'zip', project_dir)
+    
+    background_tasks.add_task(remove_file, zip_path)
+
+    try:
+        # Envoi direct du ZIP sur l'API Netlify pour créer un site instantané
+        headers = {
+            "Authorization": f"Bearer {NETLIFY_AUTH_TOKEN}",
+            "Content-Type": "application/zip"
+        }
         
+        url = "https://api.netlify.com/api/v1/sites"
+        
+        with open(zip_path, "rb") as f:
+            res = requests.post(url, headers=headers, data=f)
+
+        if res.status_code not in [200, 201]:
+            print(f"Netlify API Error: {res.status_code} - {res.text}")
+            raise HTTPException(status_code=500, detail="Échec lors du déploiement sur Netlify.")
+
+        data = res.json()
+        deployed_url = data.get("ssl_url") or data.get("url")
+
+        return {
+            "status": "success",
+            "message": "Projet déployé avec succès sur Netlify !",
+            "deploy_url": deployed_url
+        }
+
+    except Exception as e:
+        print(f"Erreur Déploiement : {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+                          
