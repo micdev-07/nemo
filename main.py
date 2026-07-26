@@ -62,6 +62,7 @@ REGLES ET EXPERTISE TECHNIQUE :
 4. CHEMINS RELATIFS OBLIGATOIRES : Dans `index.html`, lie TOUJOURS les fichiers de style et scripts avec des chemins relatifs simples, sans slash initial (ex: `href="style.css"` et NOT `href="/style.css"`).
 5. FORMAT DE RÉPONSE STRICT :
    Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide contenant la clé "files" avec tous les fichiers du projet (ex: index.html, style.css, script.js).
+RÈGLE DE CONCISION : Rédige des textes clairs, percutants et synthétiques dans le HTML. Évite les sections de texte excessivement longues afin que la réponse JSON complète reste sous la limite de taille."
 """
 
 # SCHÉMA DE RÉPONSE COMPATIBLE GEMINI DEVELOPER API
@@ -94,31 +95,53 @@ class DeployProjectRequest(BaseModel):
 
 # --- PARSEUR JSON ULTRA-ROBUSTE ---
 def parse_llm_json(raw_text: str) -> dict:
-    """Extrait et répare le JSON renvoyé par Gemini."""
+    """Extrait et répare le JSON renvoyé par Gemini (y compris s'il est tronqué)."""
     cleaned = raw_text.strip()
     cleaned = re.sub(r'^```(?:json)?\s*', '', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'\s*```$', '', cleaned)
     cleaned = cleaned.strip()
 
+    # 1. Tentative de parse standard
     try:
         return json.loads(cleaned, strict=False)
     except json.JSONDecodeError:
         pass
 
+    # 2. Extraction via Regex
     match = re.search(r'\{.*\}', cleaned, re.DOTALL)
-    if match:
-        json_str = match.group(0)
+    json_str = match.group(0) if match else cleaned
+
+    try:
+        return json.loads(json_str, strict=False)
+    except json.JSONDecodeError:
         try:
-            return json.loads(json_str, strict=False)
+            json_str_fixed = re.sub(r'(?<!\\)\n', r'\\n', json_str)
+            return json.loads(json_str_fixed, strict=False)
         except json.JSONDecodeError:
-            try:
-                json_str_fixed = re.sub(r'(?<!\\)\n', r'\\n', json_str)
-                return json.loads(json_str_fixed, strict=False)
-            except json.JSONDecodeError:
-                pass
+            pass
+
+    # 🚨 3. NOUVELLE ÉTAPE : Réparation d'urgence si le JSON a été tronqué (Cut-off)
+    try:
+        fixed_truncated = json_str_fixed if 'json_str_fixed' in locals() else json_str
+        
+        # S'il manque la fermeture des guillemets
+        if fixed_truncated.count('"') % 2 != 0:
+            fixed_truncated += '"'
+        
+        # Fermeture automatique des structures ouvertes (accolades / crochets)
+        open_braces = fixed_truncated.count('{') - fixed_truncated.count('}')
+        open_brackets = fixed_truncated.count('[') - fixed_truncated.count(']')
+        
+        fixed_truncated += ']' * max(0, open_brackets)
+        fixed_truncated += '}' * max(0, open_braces)
+
+        print("⚠️ tentative de réparation d'un JSON tronqué...")
+        return json.loads(fixed_truncated, strict=False)
+    except json.JSONDecodeError:
+        pass
 
     raise ValueError("Impossible de parser la structure JSON retournée par l'IA.")
-
+        
 def save_project_to_disk(project_id: str, files: dict) -> str:
     """Enregistre les fichiers du projet sur le disque dur du serveur Render."""
     clean_id = re.sub(r'[^\w\-]', '_', project_id).lower()
@@ -163,7 +186,7 @@ async def create_project(req: CreateProjectRequest):
                 response_mime_type="application/json",
                 response_schema=JSON_SCHEMA_NEMO,
                 temperature=0.1,
-                max_output_tokens=8192
+                max_output_tokens=16384
             )
         )
         raw_text = response.text
@@ -232,7 +255,7 @@ async def modify_project(request: ModifyProjectRequest):
                     response_mime_type="application/json",
                     response_schema=JSON_SCHEMA_NEMO,
                     temperature=0.1,
-                    max_output_tokens=8192
+                    max_output_tokens=16384
                 )
             )
             raw_text = response.text
