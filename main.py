@@ -157,7 +157,7 @@ async def create_project(req: CreateProjectRequest):
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=JSON_SCHEMA_NEMO,
-                temperature=0.4,
+                temperature=0.1,
                 max_output_tokens=8192
             )
         )
