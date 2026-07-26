@@ -3,7 +3,9 @@ import re
 import json
 import time
 import shutil
-import requests  # <-- Ajouté pour faire les requêtes vers l'API Netlify
+import requests
+from datetime import date
+from collections import defaultdict
 from typing import Dict
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
@@ -17,7 +19,11 @@ from google.api_core.exceptions import ResourceExhausted
 # --- CONFIGURATION INITIALE ---
 app = FastAPI(title="NEMO Studio API", version="2.2.0")
 
-# Support du CORS (Configuration stricte sans slash final)
+# Suivi du quota de modification (2 modifs max / jour / projet)
+DAILY_MODIFY_LIMIT = 2
+usage_tracker = defaultdict(lambda: defaultdict(int))
+
+# Support du CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -45,7 +51,7 @@ NETLIFY_AUTH_TOKEN = os.getenv("NETLIFY_AUTH_TOKEN", "")
 SYSTEM_PROMPT_NEMO = """
 Tu es NEMO, un développeur Front-end d'élite et UI/UX Designer d'exception.
 Ton objectif est de concevoir des applications web Single Page (SPA), des portfolios, des landing pages et des outils web d'une qualité visuelle et fonctionnelle "Masterclass" (niveau Awwwards).
-Dans tout le projet que tu vas généré mensionne que c'est créer par l'outil NEMO STUDIO de Micoffice Labs (que ça n'agresse pas le rendu final du site.
+Dans tout le projet que tu vas générer mentionne que c'est créé par l'outil NEMO STUDIO de Micoffice Labs (sans agresser le rendu final du site).
 REGLES ET EXPERTISE TECHNIQUE :
 1. PURE FRONT-END : Génère uniquement du HTML, CSS et JavaScript côté client. N'utilise AUCUN backend, ni API externe nécessitant des clés d'accès.
 2. PERSISTANCE LOCALE (`localStorage`) : Si l'application nécessite de sauvegarder un état, utilise exclusivement le `localStorage`.
@@ -88,7 +94,6 @@ class DeployProjectRequest(BaseModel):
     project_id: str
 
 # --- PARSEUR JSON ULTRA-ROBUSTE ---
-
 def parse_llm_json(raw_text: str) -> dict:
     """Extrait et répare le JSON renvoyé par Gemini."""
     cleaned = raw_text.strip()
@@ -164,12 +169,12 @@ async def create_project(req: CreateProjectRequest):
         )
         raw_text = response.text
 
-        # 🚨 AJOUTE CES 3 LIGNES DE PRINT ICI 🚨
         print("=" * 40)
-        print("=== RÉPONSE BRUTE DE GEMINI ===")
+        print("=== RÉPONSE BRUTE DE GEMINI (CREATE) ===")
         print(raw_text)
         print("=" * 40)
-        project_data = parse_llm_json(response.text)
+        
+        project_data = parse_llm_json(raw_text)
         files = project_data.get("files", {})
         
         if not files or not isinstance(files, dict):
@@ -194,9 +199,9 @@ async def create_project(req: CreateProjectRequest):
         print(f"Erreur NEMO : {e}")
         raise HTTPException(status_code=500, detail=f"Erreur interne : {err_msg}")
 
-# 2. MODIFICATION
+# 2. MODIFICATION DE PROJET
 @app.post("/api/modify")
-async def modify_project(request: ModifyRequest):
+async def modify_project(request: ModifyProjectRequest):
     today_str = str(date.today())
     project_id = request.project_id
     
@@ -209,15 +214,8 @@ async def modify_project(request: ModifyRequest):
         )
 
     # 2. Construction du prompt optimisé
-    system_instruction = (
-        "Tu es NEMO, un agent développeur front-end expert. "
-        "Ton rôle est d'appliquer la modification demandée sur le code existant. "
-        "Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide contenant les fichiers mis à jour. "
-        "Exemple de format : {\"files\": {\"index.html\": \"...\"}}. Ne rajoute aucun commentaire hors du JSON."
-    )
-    
     full_prompt = (
-        f"{system_instruction}\n\n"
+        f"{SYSTEM_PROMPT_NEMO}\n\n"
         f"--- CODE ACTUEL DU PROJET ---\n{json.dumps(request.current_files, ensure_ascii=False)}\n\n"
         f"--- MODIFICATION DEMANDÉE ---\n{request.prompt}"
     )
@@ -228,26 +226,43 @@ async def modify_project(request: ModifyRequest):
         try:
             print(f"🔄 Tentative de modification {attempt + 1}/{max_retries} pour le projet {project_id}...")
             
-            response = model.generate_content(full_prompt)
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=full_prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=JSON_SCHEMA_NEMO,
+                    temperature=0.1,
+                    max_output_tokens=8192
+                )
+            )
             raw_text = response.text
 
             print("=" * 40)
-            print("=== RÉPONSE BRUTE DE MODIFICATION ===")
+            print("=== RÉPONSE BRUTE DE GEMINI (MODIFY) ===")
             print(raw_text)
             print("=" * 40)
 
-            parsed_data = clean_and_parse_json(raw_text)
+            parsed_data = parse_llm_json(raw_text)
+            files = parsed_data.get("files", {})
+
+            if not files or not isinstance(files, dict):
+                raise ValueError("Format de réponse invalide pour la modification.")
+
+            # Sauvegarde sur le disque
+            clean_id = save_project_to_disk(project_id, files)
+            project_url = f"{BACKEND_URL}/projects/{clean_id}/index.html?t={int(time.time())}"
             
-            # 4. Incrémentation du compteur si la modification a réussi
+            # 4. Incrémentation du compteur
             usage_tracker[today_str][project_id] += 1
             remaining = DAILY_MODIFY_LIMIT - usage_tracker[today_str][project_id]
             print(f"✅ Modification réussie. Modifications restantes pour aujourd'hui : {remaining}")
 
             return {
                 "status": "success",
-                "project_id": project_id,
-                "project_url": f"https://nemo-hdgw.onrender.com/preview/{project_id}",
-                "files": parsed_data.get("files", parsed_data),
+                "project_id": clean_id,
+                "project_url": project_url,
+                "files": files,
                 "remaining_modifications": remaining
             }
 
@@ -295,7 +310,6 @@ async def deploy_to_netlify(req: DeployProjectRequest, background_tasks: Backgro
     if not os.path.exists(project_dir):
         raise HTTPException(status_code=404, detail="Projet introuvable pour le déploiement.")
 
-    # Création temporaire du ZIP pour l'API Netlify
     zip_base_path = os.path.join(PROJECTS_DIR, f"deploy_{clean_id}")
     zip_path = f"{zip_base_path}.zip"
     shutil.make_archive(zip_base_path, 'zip', project_dir)
@@ -303,7 +317,6 @@ async def deploy_to_netlify(req: DeployProjectRequest, background_tasks: Backgro
     background_tasks.add_task(remove_file, zip_path)
 
     try:
-        # Envoi direct du ZIP sur l'API Netlify pour créer un site instantané
         headers = {
             "Authorization": f"Bearer {NETLIFY_AUTH_TOKEN}",
             "Content-Type": "application/zip"
@@ -330,4 +343,4 @@ async def deploy_to_netlify(req: DeployProjectRequest, background_tasks: Backgro
     except Exception as e:
         print(f"Erreur Déploiement : {e}")
         raise HTTPException(status_code=500, detail=str(e))
-                          
+            
