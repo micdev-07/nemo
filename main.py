@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from google import genai
 from google.genai import types
+from google.api_core.exceptions import ResourceExhausted
 
 # --- CONFIGURATION INITIALE ---
 app = FastAPI(title="NEMO Studio API", version="2.2.0")
@@ -44,7 +45,7 @@ NETLIFY_AUTH_TOKEN = os.getenv("NETLIFY_AUTH_TOKEN", "")
 SYSTEM_PROMPT_NEMO = """
 Tu es NEMO, un développeur Front-end d'élite et UI/UX Designer d'exception.
 Ton objectif est de concevoir des applications web Single Page (SPA), des portfolios, des landing pages et des outils web d'une qualité visuelle et fonctionnelle "Masterclass" (niveau Awwwards).
-
+Dans tout le projet que tu vas généré mensionne que c'est créer par l'outil NEMO STUDIO de Micoffice Labs (que ça n'agresse pas le rendu final du site.
 REGLES ET EXPERTISE TECHNIQUE :
 1. PURE FRONT-END : Génère uniquement du HTML, CSS et JavaScript côté client. N'utilise AUCUN backend, ni API externe nécessitant des clés d'accès.
 2. PERSISTANCE LOCALE (`localStorage`) : Si l'application nécessite de sauvegarder un état, utilise exclusivement le `localStorage`.
@@ -193,47 +194,78 @@ async def create_project(req: CreateProjectRequest):
         print(f"Erreur NEMO : {e}")
         raise HTTPException(status_code=500, detail=f"Erreur interne : {err_msg}")
 
-# 2. MODIFICATION DE PROJET
+# 2. MODIFICATION
 @app.post("/api/modify")
-async def modify_project(req: ModifyProjectRequest):
-    try:
-        prompt_modif = f"{SYSTEM_PROMPT_NEMO}\n\nPROJET ACTUEL :\n{json.dumps(req.current_files)}\n\nMODIFICATION DEMANDÉE :\n{req.prompt}"
-        
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt_modif,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=JSON_SCHEMA_NEMO,
-                temperature=0.2,
-                max_output_tokens=8192
-            )
+async def modify_project(request: ModifyRequest):
+    today_str = str(date.today())
+    project_id = request.project_id
+    
+    # 1. Vérification du quota journalier (Max 2 modifs par projet)
+    current_count = usage_tracker[today_str][project_id]
+    if current_count >= DAILY_MODIFY_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Limite atteinte : Vous ne pouvez modifier un même projet que {DAILY_MODIFY_LIMIT} fois par jour."
         )
-        
-        project_data = parse_llm_json(response.text)
-        files = project_data.get("files", {})
-        
-        if not files or not isinstance(files, dict):
-            raise ValueError("Le dictionnaire des fichiers est invalide ou vide.")
 
-        clean_id = save_project_to_disk(req.project_id, files)
-        project_url = f"{BACKEND_URL}/projects/{clean_id}/index.html?t={int(time.time())}"
-        
-        return {
-            "status": "success",
-            "project_id": clean_id,
-            "project_url": project_url,
-            "files": files
-        }
-    except Exception as e:
-        err_msg = str(e)
-        if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+    # 2. Construction du prompt optimisé
+    system_instruction = (
+        "Tu es NEMO, un agent développeur front-end expert. "
+        "Ton rôle est d'appliquer la modification demandée sur le code existant. "
+        "Réponds EXCLUSIVEMENT sous la forme d'un objet JSON valide contenant les fichiers mis à jour. "
+        "Exemple de format : {\"files\": {\"index.html\": \"...\"}}. Ne rajoute aucun commentaire hors du JSON."
+    )
+    
+    full_prompt = (
+        f"{system_instruction}\n\n"
+        f"--- CODE ACTUEL DU PROJET ---\n{json.dumps(request.current_files, ensure_ascii=False)}\n\n"
+        f"--- MODIFICATION DEMANDÉE ---\n{request.prompt}"
+    )
+
+    # 3. Exécution avec gestion des réessais en cas de Rate Limit (429)
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            print(f"🔄 Tentative de modification {attempt + 1}/{max_retries} pour le projet {project_id}...")
+            
+            response = model.generate_content(full_prompt)
+            raw_text = response.text
+
+            print("=" * 40)
+            print("=== RÉPONSE BRUTE DE MODIFICATION ===")
+            print(raw_text)
+            print("=" * 40)
+
+            parsed_data = clean_and_parse_json(raw_text)
+            
+            # 4. Incrémentation du compteur si la modification a réussi
+            usage_tracker[today_str][project_id] += 1
+            remaining = DAILY_MODIFY_LIMIT - usage_tracker[today_str][project_id]
+            print(f"✅ Modification réussie. Modifications restantes pour aujourd'hui : {remaining}")
+
+            return {
+                "status": "success",
+                "project_id": project_id,
+                "project_url": f"https://nemo-hdgw.onrender.com/preview/{project_id}",
+                "files": parsed_data.get("files", parsed_data),
+                "remaining_modifications": remaining
+            }
+
+        except ResourceExhausted:
+            if attempt < max_retries - 1:
+                print("⚠️ Rate Limit atteint. Pause de 5 secondes avant de réessayer...")
+                time.sleep(5)
+            else:
+                raise HTTPException(
+                    status_code=429,
+                    detail="L'IA est temporairement trop sollicitée. Réessaie dans une minute."
+                )
+        except Exception as e:
+            print(f"❌ Erreur lors de la modification : {str(e)}")
             raise HTTPException(
-                status_code=429, 
-                detail="NEMO est surchargé ! Trop de demandes en peu de temps, réessaye dans 10 secondes."
+                status_code=500,
+                detail=f"Erreur interne lors de la modification : {str(e)}"
             )
-        print(f"Erreur NEMO : {e}")
-        raise HTTPException(status_code=500, detail=f"Erreur interne : {err_msg}")
 
 # 3. TÉLÉCHARGEMENT ZIP
 @app.get("/api/download/{project_id}")
