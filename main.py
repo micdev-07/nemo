@@ -161,7 +161,13 @@ async def create_project(req: CreateProjectRequest):
                 max_output_tokens=8192
             )
         )
-        
+        raw_text = response.text
+
+        # 🚨 AJOUTE CES 3 LIGNES DE PRINT ICI 🚨
+        print("=" * 40)
+        print("=== RÉPONSE BRUTE DE GEMINI ===")
+        print(raw_text)
+        print("=" * 40)
         project_data = parse_llm_json(response.text)
         files = project_data.get("files", {})
         
