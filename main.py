@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from google import genai
 from google.genai import types
-
+from google.api_core.exceptions import ResourceExhausted
 # --- CONFIGURATION INITIALE ---
 app = FastAPI(title="NEMO Studio API", version="2.2.0")
 
